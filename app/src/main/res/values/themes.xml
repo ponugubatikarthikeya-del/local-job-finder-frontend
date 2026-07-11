@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- This theme is used by the system to show the logo instantly on cold-start -->
+    <style name= "Theme.LocalJobFinder.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#1E293B</item> <!-- Dark Slate Primary Gray -->
+        <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+<!--        <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>-->
+        <item name="postSplashScreenTheme">@style/Theme.LocalJobFinder</item> <!-- Destined Main App Theme -->
+    </style>
+
+    <style name="Theme.LocalJobFinder" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
