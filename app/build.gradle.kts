@@ -45,6 +45,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.material)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
@@ -72,9 +73,10 @@ dependencies {
     // 4. Hilt Dependency Injection
     implementation(libs.hilt.android)
     ksp(libs.dagger.hilt.compiler)
+    implementation(libs.hilt.navigation.compose)
 
     implementation(libs.androidx.navigation.compose)
 
     implementation(libs.androidx.compose.material3.windowSizeClass)
-//    implementation(libs.kotlinx.serialization.json) // For safe routing
+    implementation(libs.kotlinx.serialization.json) // For safe routing
 }

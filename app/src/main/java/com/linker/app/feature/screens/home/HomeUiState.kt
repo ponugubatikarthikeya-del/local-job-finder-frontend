@@ -1,0 +1,4 @@
+package com.linker.app.feature.screens.home
+
+class HomeUiState {
+}
