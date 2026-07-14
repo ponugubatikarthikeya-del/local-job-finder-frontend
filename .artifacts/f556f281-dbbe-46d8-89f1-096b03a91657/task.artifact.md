@@ -1,0 +1,6 @@
+- [x] Refactor `HomeUi.kt`
+    - [x] Wrap dummy data in `remember`
+    - [x] Fix navigation callback passing
+    - [x] Update string manipulation (remove deprecated `capitalize`)
+    - [x] Apply theme-aware colors to the "Quick Apply" button
+- [x] Verify build and functionality

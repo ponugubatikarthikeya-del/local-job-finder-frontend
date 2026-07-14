@@ -33,7 +33,7 @@ object LoadingScreen
 object HomeScreen
 
 @Serializable
-object ProfileUpdate
+object ProfileUpdateScreen
 
 @Serializable
 object PublicProfileScreen

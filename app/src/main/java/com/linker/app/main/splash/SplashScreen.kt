@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.linker.app.R
@@ -79,7 +80,9 @@ fun SplashScreen(
                 text = "Version",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                letterSpacing = 2.sp
+                letterSpacing = 2.sp,
+                overflow = TextOverflow.Ellipsis,
+                softWrap = true
             )
             Text(
                 text = "1.0.0",

@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.dagger.hilt.android)
 }
@@ -79,4 +80,6 @@ dependencies {
 
     implementation(libs.androidx.compose.material3.windowSizeClass)
     implementation(libs.kotlinx.serialization.json) // For safe routing
+
+    implementation(libs.androidx.google.fonts)
 }
