@@ -59,10 +59,12 @@ fun LocalJobFinderTheme(
         }
     }
 
+    val typography = calculateResponsiveTypography()
+
     MaterialTheme(
         colorScheme = colorScheme,
         content = content,
         shapes = Shapes,
-        typography = Typography
+        typography = typography
     )
 }

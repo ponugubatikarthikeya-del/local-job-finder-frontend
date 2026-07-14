@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.linker.app.core.network.connection.ConnectivityScreenLauncher
 import com.linker.app.main.splash.SplashScreen
+import com.linker.app.navigation.AppNavGraph
 import com.linker.app.ui.theme.LocalJobFinderTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -32,16 +33,13 @@ class MainActivity : ComponentActivity() {
         val systemSplashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        // Keep the system splash screen on until the Compose splash is ready to be displayed
+        // Keep the system splash screen on until the Compose content is ready
         systemSplashScreen.setKeepOnScreenCondition {
-            !viewModel.isSplashFinished.value && !viewModel.isReady.value
+            !viewModel.isReady.value
         }
 
         setContent {
             LocalJobFinderTheme {
-                // Observe states from ViewModel
-                val isSplashFinished by viewModel.isSplashFinished.collectAsState()
-
                 // Mark as ready once Compose starts rendering
                 LaunchedEffect(Unit) {
                     viewModel.setReady(true)
@@ -51,15 +49,8 @@ class MainActivity : ComponentActivity() {
                 ConnectivityScreenLauncher {
                     // Use the background color from theme
                     Surface(color = MaterialTheme.colorScheme.background) {
-                        if (!isSplashFinished) {
-                            // 4. Show the custom animated splash screen
-                            SplashScreen(
-                                onFinished = { viewModel.splashFinished() }
-                            )
-                        } else {
-                            // 5. App Content (Home/Navigation)
-                            MainAppContent()
-                        }
+                        // 5. App Content (Home/Navigation)
+                        AppNavGraph()
                     }
                 }
             }
@@ -67,13 +58,3 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable
-fun MainAppContent() {
-    // Placeholder for your main navigation/screens
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text = "Main App Content Loaded", style = MaterialTheme.typography.headlineMedium)
-    }
-}
