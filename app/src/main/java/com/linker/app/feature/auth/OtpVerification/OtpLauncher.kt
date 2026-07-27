@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.collectLatest
 fun OtpLauncher(
     viewModel: OtpViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
-    onVerificationSuccess: () -> Unit
+    onVerificationSuccess: (String?) -> Unit
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -21,7 +21,7 @@ fun OtpLauncher(
     LaunchedEffect(Unit) {
         viewModel.effect.collectLatest { effect ->
             when (effect) {
-                is OtpEffect.VerificationSuccess -> onVerificationSuccess()
+                is OtpEffect.VerificationSuccess -> onVerificationSuccess(effect.otp)
                 is OtpEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
                 }

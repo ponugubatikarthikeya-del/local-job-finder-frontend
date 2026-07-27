@@ -82,4 +82,9 @@ dependencies {
     implementation(libs.kotlinx.serialization.json) // For safe routing
 
     implementation(libs.androidx.google.fonts)
+
+    // 5. Room Database
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 }

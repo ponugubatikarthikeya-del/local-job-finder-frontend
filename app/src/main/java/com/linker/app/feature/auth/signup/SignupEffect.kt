@@ -2,8 +2,8 @@ package com.linker.app.feature.auth.signup
 
 sealed interface SignupEffect {
     object NavigateToLogin : SignupEffect
+    data class NavigateToOtpVerification(val email: String) : SignupEffect
 
-    object NavigateToOtpVerification : SignupEffect
     data class ShowError(val message: String) : SignupEffect
-    object SignupSuccess : SignupEffect
+//    object SignupSuccess : SignupEffect
 }

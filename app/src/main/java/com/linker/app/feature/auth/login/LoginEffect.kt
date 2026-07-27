@@ -8,11 +8,13 @@ sealed interface LoginEffect {
 
     object NavigateToForgotPassword : LoginEffect
 
-    object NavigateToOtpVerification : LoginEffect
+    data class NavigateToOtpVerification(val email: String) : LoginEffect
 
-    object NavigateToHome : LoginEffect
+//    object NavigateToHome : LoginEffect
 
     data class ShowError(val message: String) : LoginEffect
+
+    object NavigateToLoadingScreen : LoginEffect
 
 //    object LoginSuccess : LoginEffect
 

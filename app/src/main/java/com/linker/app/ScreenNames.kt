@@ -15,10 +15,13 @@ object LoginScreen
 object ResetPasswordEmailSendScreen
 
 @Serializable
-object ResetOtpVerificationScreen
+data class ResetOtpVerificationScreen(val email: String)
 
 @Serializable
-object ResetPasswordScreen
+data class SignupOtpVerificationScreen(val email: String = "")
+
+@Serializable
+data class ResetPasswordScreen(val email: String, val otp: Int)
 
 @Serializable
 object SkipperScreen
@@ -53,3 +56,5 @@ object PrivateJobDetails
 @Serializable
 object MyJobsScreen
 
+@Serializable
+object NotificationScreen

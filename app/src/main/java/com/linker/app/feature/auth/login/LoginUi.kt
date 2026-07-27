@@ -1,6 +1,5 @@
 package com.linker.app.feature.auth.login
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,19 +22,15 @@ import androidx.compose.material.icons.filled.Facebook
 import androidx.compose.material.icons.filled.GMobiledata
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Phone
-import androidx.compose.material.icons.outlined.RemoveRedEye
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -51,7 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.linker.app.core.designsystem.components.AppTextField
+import com.linker.app.core.util.components.AppTextField
 import com.linker.app.feature.auth.signup.SignupEvent
 import com.linker.app.ui.theme.LocalJobFinderTheme
 
@@ -134,19 +129,29 @@ fun LoginUi(
 
                 Button(
                     onClick = { onEvent(LoginEvent.OnLoginBtnClicked) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
                     shape = MaterialTheme.shapes.large,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color.Blue,
                         contentColor = Color.White
-                    )
+                    ),
+                    enabled = !state.isLoading
                 ) {
-                    Text(
-                        text = "Login",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(8.dp)
-                    )
+                    if (state.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = "Login",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(10.dp))
@@ -187,7 +192,7 @@ fun LoginUi(
                         shape = MaterialTheme.shapes.medium
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(6.dp)) {
+                            modifier = Modifier.padding(4.dp)) {
                             Icon(
                                 imageVector = Icons.Default.Facebook,
                                 contentDescription = "Facebook",

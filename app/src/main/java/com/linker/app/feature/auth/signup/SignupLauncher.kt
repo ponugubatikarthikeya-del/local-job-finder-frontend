@@ -13,8 +13,8 @@ import kotlinx.coroutines.flow.collectLatest
 fun SignupLauncher(
     viewModel: SignupViewModel = hiltViewModel(),
     onNavigateToLogin: () -> Unit,
-    onSignupSuccess: () -> Unit,
-    onNavigateToOtpVerification : () -> Unit
+//    onSignupSuccess: () -> Unit,
+    onNavigateToOtpVerification: (String) -> Unit
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -23,8 +23,8 @@ fun SignupLauncher(
         viewModel.effect.collectLatest { effect ->
             when (effect) {
                 is SignupEffect.NavigateToLogin -> onNavigateToLogin()
-                is SignupEffect.SignupSuccess -> onSignupSuccess()
-                is SignupEffect.NavigateToOtpVerification -> onNavigateToOtpVerification()
+//                is SignupEffect.SignupSuccess -> onSignupSuccess()
+                is SignupEffect.NavigateToOtpVerification -> onNavigateToOtpVerification(effect.email)
                 is SignupEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
                 }

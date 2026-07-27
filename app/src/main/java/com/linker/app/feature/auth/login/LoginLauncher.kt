@@ -14,8 +14,8 @@ fun LoginLauncher(
     viewModel: LoginViewModel = hiltViewModel(),
     NavigateToSignup : () -> Unit,
     NavigateToForgotPassword : () -> Unit,
-    NavigateToOtpVerification : () -> Unit,
-    NavigateToHome : () -> Unit
+    NavigateToOtpVerification : (String) -> Unit,
+    NavigateToLoading : () -> Unit
 ) {
 
     val context = LocalContext.current
@@ -25,10 +25,10 @@ fun LoginLauncher(
     LaunchedEffect(Unit) {
         viewModel.effect.collectLatest { effect ->
             when (effect) {
-               is LoginEffect.NavigateToHome -> NavigateToHome()
+               is LoginEffect.NavigateToLoadingScreen -> NavigateToLoading()
                 is LoginEffect.NavigateToSignup -> NavigateToSignup()
                 is LoginEffect.NavigateToForgotPassword -> NavigateToForgotPassword()
-                is LoginEffect.NavigateToOtpVerification -> NavigateToOtpVerification()
+                is LoginEffect.NavigateToOtpVerification -> NavigateToOtpVerification(effect.email)
                 is LoginEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
                 }

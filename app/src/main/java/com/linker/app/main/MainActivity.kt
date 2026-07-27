@@ -4,21 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import com.linker.app.core.network.connection.ConnectivityScreenLauncher
-import com.linker.app.main.splash.SplashScreen
+
 import com.linker.app.navigation.AppNavGraph
 import com.linker.app.ui.theme.LocalJobFinderTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -45,14 +35,14 @@ class MainActivity : ComponentActivity() {
                     viewModel.setReady(true)
                 }
 
-                // 3. Wrap everything in our Connectivity observer
-                ConnectivityScreenLauncher {
+//                // 3. Wrap everything in our Connectivity observer
+//                ConnectivityScreenLauncher {
                     // Use the background color from theme
                     Surface(color = MaterialTheme.colorScheme.background) {
                         // 5. App Content (Home/Navigation)
                         AppNavGraph()
+
                     }
-                }
             }
         }
     }

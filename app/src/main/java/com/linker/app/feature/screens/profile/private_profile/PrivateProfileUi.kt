@@ -9,7 +9,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -20,8 +19,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.linker.app.domain.models.User
+import androidx.hilt.navigation.compose.hiltViewModel
+
+import com.linker.app.core.data.models.User
 import com.linker.app.ui.theme.LocalJobFinderTheme
 import java.math.BigDecimal
 import java.time.Instant
@@ -29,9 +29,11 @@ import java.time.Instant
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrivateProfileUi(
+    viewModel: PrivateProfileViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
     onEditProfile: () -> Unit = {},
-    onViewPublicProfile: () -> Unit = {}
+    onViewPublicProfile: () -> Unit = {},
+    onLogout: () -> Unit = {}
 ) {
     // Dummy Data
     val user = User(
@@ -148,7 +150,9 @@ fun PrivateProfileUi(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 Button(
-                    onClick = { },
+                    onClick = { 
+                        viewModel.logout { onLogout() }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer,
