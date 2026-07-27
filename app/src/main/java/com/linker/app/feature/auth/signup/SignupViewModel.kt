@@ -2,8 +2,12 @@ package com.linker.app.feature.auth.signup
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.linker.app.core.network_api.NetworkResult
+import com.linker.app.core.data.request.SignupRequest
+import com.linker.app.core.network_api.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,9 +15,12 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel
-class SignupViewModel @Inject constructor() : ViewModel() {
+class SignupViewModel @Inject constructor(
+    private val repository: AuthRepository
+) : ViewModel() {
 
     private val _state = MutableStateFlow(SignupUiState())
     val state: StateFlow<SignupUiState> = _state.asStateFlow()
@@ -43,7 +50,7 @@ class SignupViewModel @Inject constructor() : ViewModel() {
             }
 
             is SignupEvent.OnNavigateToOtpVerificationClicked -> {
-                sendEffect(SignupEffect.NavigateToOtpVerification)
+                sendEffect(SignupEffect.NavigateToOtpVerification(_state.value.email))
             }
             is SignupEvent.OnSignupBtnClicked -> {
                 performSignup()
@@ -64,19 +71,41 @@ class SignupViewModel @Inject constructor() : ViewModel() {
     }
 
     private fun performSignup() {
-        if (_state.value.username.isBlank() || _state.value.email.isBlank() || _state.value.password.isBlank()) {
+        val currentState = _state.value
+        if (currentState.username.isBlank() || currentState.email.isBlank() || currentState.password.isBlank() || currentState.phone.isBlank()) {
             sendEffect(SignupEffect.ShowError("Please fill in all fields"))
             return
         }
 
+        if(!currentState.email.contains("@gmail.com")){
+            sendEffect(SignupEffect.ShowError("Please enter a valid email"))
+        }
+
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, errorMessage = null) }
-            
-            // Simulate API call
-            kotlinx.coroutines.delay(1500)
-            
-            _state.update { it.copy(isLoading = false) }
-            sendEffect(SignupEffect.SignupSuccess)
+
+            delay(3000.milliseconds)
+
+            val request = SignupRequest(
+                username = currentState.username,
+                phone = currentState.phone,
+                email = currentState.email,
+                password = currentState.password
+            )
+
+            when (val result = repository.signup(request)) {
+                is NetworkResult.Success -> {
+                    _state.update { it.copy(isLoading = false) }
+                    sendEffect(SignupEffect.NavigateToOtpVerification(currentState.email))
+                }
+                is NetworkResult.Failure -> {
+                    _state.update { it.copy(isLoading = false, errorMessage = result.exception.message) }
+                    sendEffect(SignupEffect.ShowError(result.exception.message ?: "Signup failed"))
+                }
+                is NetworkResult.Loading -> {
+                    _state.update { it.copy(isLoading = true) }
+                }
+            }
         }
     }
 }

@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -22,24 +23,34 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.linker.app.*
 import com.linker.app.feature.auth.OtpVerification.OtpLauncher
 import com.linker.app.feature.auth.login.LoginLauncher
+import com.linker.app.feature.auth.loading.LoadingLauncher
 import com.linker.app.feature.auth.reset_password.resetEmailEvent.ResetEmailLauncher
 import com.linker.app.feature.auth.reset_password.resetPassword.ResetPasswordLauncher
 import com.linker.app.feature.auth.signup.SignupLauncher
+import com.linker.app.feature.screens.error.NetworkErrorScreen
 import com.linker.app.feature.screens.home.HomeUi
 import com.linker.app.feature.screens.job.post_jobs.PostJobUi
+import com.linker.app.feature.screens.job.public_job_details.PublicJobDetailsUi
 import com.linker.app.feature.screens.profile.private_profile.PrivateProfileUi
 import com.linker.app.feature.screens.profile.profile_update.UpdateProfileUi
 import com.linker.app.feature.screens.profile.public_profile.PublicProfileUi
+import com.linker.app.main.MainViewModel
+import com.linker.app.main.splash.SplashState
 import com.linker.app.main.splash.SplashScreen as SplashScreenUi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppNavGraph() {
+fun AppNavGraph(
+    mainViewModel: MainViewModel = viewModel()
+) {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -47,160 +58,282 @@ fun AppNavGraph() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    // Visibility logic for Bars - hide on Auth and Splash screens
-    val isMainScreen = currentDestination?.let { dest ->
-        !dest.hasRoute<LoginScreen>() &&
-        !dest.hasRoute<SignupScreen>() &&
-        !dest.hasRoute<SplashScreen>() &&
-        !dest.hasRoute<ResetPasswordEmailSendScreen>() &&
-        !dest.hasRoute<ResetOtpVerificationScreen>() &&
-        !dest.hasRoute<ResetPasswordScreen>() &&
-        !dest.hasRoute<SkipperScreen>() &&
-        !dest.hasRoute<DetailsTakeScreen>() &&
-        !dest.hasRoute<LoadingScreen>()
-    } ?: false
+    val splashState by mainViewModel.splashState.collectAsStateWithLifecycle()
+    var isAnimationFinished by remember { mutableStateOf(false) }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        gesturesEnabled = isMainScreen,
-        drawerContent = {
-            AppDrawerContent(
-                navController = navController,
-                currentDestination = currentDestination,
-                drawerState = drawerState,
-                scope = scope
-            )
+    // Collect global internet connectivity state
+    val isNetworkAvailable by mainViewModel.isNetworkAvailable.collectAsStateWithLifecycle()
+    val isStabilizing by mainViewModel.isStabilizing.collectAsStateWithLifecycle()
+
+    // Track previous offline state to detect when the user comes back online
+    var wasOffline by remember { mutableStateOf(false) }
+
+    // Always-Active Network Listener: Detects reconnection globally
+    LaunchedEffect(isNetworkAvailable) {
+        if (!isNetworkAvailable) {
+            wasOffline = true
+        } else if (wasOffline) {
+            wasOffline = false
+            // The stabilization delay is now handled inside MainViewModel.isNetworkAvailable.onEach
+            mainViewModel.retryAuthCheck()
         }
-    ) {
-        Scaffold(
-            contentWindowInsets = WindowInsets(0.dp),
-            bottomBar = {
-                if (isMainScreen) {
-                    AppBottomBar(
-                        navController = navController,
-                        currentDestination = currentDestination
-                    )
-                }
-            }
-        ) { paddingValues ->
-            NavHost(
-                navController = navController,
-                startDestination = SplashScreen,
-                modifier = Modifier.padding(paddingValues)
-            ) {
-                composable<SplashScreen> {
-                    SplashScreenUi(
-                        onFinished = {
-                            navController.navigate(LoginScreen) {
-                                popUpTo(SplashScreen) { inclusive = true }
-                            }
-                        }
-                    )
+    }
+
+    LaunchedEffect(isAnimationFinished, splashState) {
+        if (isAnimationFinished) {
+            when (splashState) {
+                is SplashState.Authenticated -> {
+                    navController.navigate(LoadingScreen) {
+                        popUpTo(SplashScreen) { inclusive = true }
+                    }
                 }
 
-                composable<LoginScreen> {
-                    LoginLauncher(
-                        NavigateToSignup = { navController.navigate(SignupScreen) },
-                        NavigateToForgotPassword = { navController.navigate(ResetPasswordEmailSendScreen) },
-                        NavigateToOtpVerification = { navController.navigate(ResetOtpVerificationScreen) },
-                        NavigateToHome = {
-                            navController.navigate(HomeScreen) {
-                                popUpTo(LoginScreen) { inclusive = true }
-                            }
-                        }
-                    )
+                is SplashState.Unauthenticated -> {
+                    navController.navigate(LoginScreen) {
+                        popUpTo(SplashScreen) { inclusive = true }
+                    }
                 }
 
-                composable<SignupScreen> {
-                    SignupLauncher(
-                        onNavigateToLogin = { navController.popBackStack() },
-                        onSignupSuccess = {
-                            navController.navigate(HomeScreen) {
-                                popUpTo(SignupScreen) { inclusive = true }
-                            }
-                        },
-                        onNavigateToOtpVerification = { navController.navigate(ResetOtpVerificationScreen) }
-                    )
-                }
-
-                composable<ResetPasswordEmailSendScreen> {
-                    ResetEmailLauncher(
-                        onNavigateBack = { navController.popBackStack() },
-                        onSendSuccess = { navController.navigate(ResetOtpVerificationScreen) }
-                    )
-                }
-
-                composable<ResetOtpVerificationScreen> {
-                    OtpLauncher(
-                        onNavigateBack = { navController.popBackStack() },
-                        onVerificationSuccess = { navController.navigate(ResetPasswordScreen) }
-                    )
-                }
-
-                composable<ResetPasswordScreen> {
-                    ResetPasswordLauncher(
-                        onNavigateBack = { navController.popBackStack() },
-                        onResetSuccess = {
-                            navController.navigate(LoginScreen) {
-                                popUpTo(ResetPasswordEmailSendScreen) { inclusive = true }
-                            }
-                        }
-                    )
-                }
-
-                composable<HomeScreen> { 
-                    HomeUi(onOpenDrawer = { scope.launch { drawerState.open() } },
-                        OnNavigateToPublicProfile = { navController.navigate(PublicProfileScreen) })
-                }
-
-                composable<MyJobsScreen> { PlaceholderScreen("My Jobs") }
-
-                composable<PrivateProfileScreen> { 
-                    PrivateProfileUi(
-                        onNavigateBack = { navController.popBackStack() },
-                        onEditProfile = { 
-                            navController.navigate(ProfileUpdateScreen)
-                        },
-                    ) 
-                }
-
-                composable<ProfileUpdateScreen> {
-                    UpdateProfileUi(
-                        onNavigateBack = { navController.popBackStack() },
-                        onSaveSuccess = { 
-                            navController.popBackStack()
-                        }
-                    ) 
-                }
-
-                composable<PostJobScreen> { 
-                    PostJobUi(
-                        onNavigateBack = { navController.popBackStack() },
-                        onPostSuccess = { navController.popBackStack() }
-                    ) 
-                }
-
-                composable<PublicProfileScreen> {
-                    PublicProfileUi(
-                        onNavigateBack = {navController.popBackStack()}
-                    )
-                }
-                composable<PublicJobDetailsScreen> { PlaceholderScreen("Public Job Details") }
-                composable<PrivateJobDetails> { PlaceholderScreen("Private Job Details") }
-                composable<SkipperScreen> { PlaceholderScreen("Skipper Screen") }
-                composable<DetailsTakeScreen> { PlaceholderScreen("Details Take Screen") }
-                composable<LoadingScreen> { PlaceholderScreen("Loading Screen") }
+                else -> {} // Still loading or network error
             }
         }
     }
+
+    // Visibility logic for Bars - hide on Auth and Splash screens
+    val isMainScreen = currentDestination?.let { dest ->
+        !dest.hasRoute<LoginScreen>() &&
+                !dest.hasRoute<SignupScreen>() &&
+                !dest.hasRoute<SplashScreen>() &&
+                !dest.hasRoute<ResetPasswordEmailSendScreen>() &&
+                !dest.hasRoute<ResetOtpVerificationScreen>() &&
+                !dest.hasRoute<SignupOtpVerificationScreen>() &&
+                !dest.hasRoute<ResetPasswordScreen>() &&
+                !dest.hasRoute<SkipperScreen>() &&
+                !dest.hasRoute<DetailsTakeScreen>() &&
+                !dest.hasRoute<LoadingScreen>()
+    } ?: false
+
+    // 2. Wrap everything in a Box for top-level overlay support
+    Box(modifier = Modifier.fillMaxSize()) {
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            gesturesEnabled = isMainScreen && isNetworkAvailable, // Disable drawer gestures when offline
+            drawerContent = {
+                AppDrawerContent(
+                    navController = navController,
+                    currentDestination = currentDestination,
+                    drawerState = drawerState,
+                    scope = scope,
+                    onLogout = {
+                        mainViewModel.logout()
+                        navController.navigate(LoginScreen) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
+        ) {
+            Scaffold(
+                contentWindowInsets = WindowInsets(0.dp),
+                bottomBar = {
+                    if (isMainScreen) {
+                        AppBottomBar(
+                            navController = navController,
+                            currentDestination = currentDestination
+                        )
+                    }
+                }
+            ) { paddingValues ->
+                NavHost(
+                    navController = navController,
+                    startDestination = SplashScreen,
+                    modifier = Modifier.padding(paddingValues)
+                ) {
+                    composable<SplashScreen> {
+                    val isNetworkError = splashState is SplashState.NetworkError
+                    val isRetrying = splashState is SplashState.Loading
+
+                    if (isNetworkError || isRetrying) {
+                        NetworkErrorScreen(
+                            message = (splashState as? SplashState.NetworkError)?.message
+                                ?: "Reconnecting...",
+                            isLoading = isRetrying,
+                            onRetry = { mainViewModel.retryAuthCheck() }
+                        )
+                    } else {
+                        SplashScreenUi(
+                            onFinished = { isAnimationFinished = true }
+                        )
+                    }
+                }
+
+
+                    composable<LoginScreen> {
+                        LoginLauncher(
+                            NavigateToSignup = { navController.navigate(SignupScreen) },
+                            NavigateToForgotPassword = {
+                                navController.navigate(
+                                    ResetPasswordEmailSendScreen
+                                )
+                            },
+                            NavigateToOtpVerification = { email ->
+                                navController.navigate(
+                                    SignupOtpVerificationScreen(email)
+                                )
+                            },
+                            NavigateToLoading = {
+                                navController.navigate(LoadingScreen) {
+                                    popUpTo(LoginScreen) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+
+                    composable<SignupScreen> {
+                        SignupLauncher(
+                            onNavigateToLogin = { navController.popBackStack() },
+//                        onSignupSuccess = {
+//                            navController.navigate(HomeScreen) {
+//                                popUpTo(SignupScreen) { inclusive = true }
+//                            }
+//                        },
+                            onNavigateToOtpVerification = { email ->
+                                navController.navigate(
+                                    SignupOtpVerificationScreen(email)
+                                )
+                            }
+                        )
+                    }
+
+                    composable<SignupOtpVerificationScreen> {
+                        OtpLauncher(
+                            onNavigateBack = { navController.popBackStack() },
+                            onVerificationSuccess = {
+                                navController.navigate(LoadingScreen) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+
+                    composable<ResetPasswordEmailSendScreen> {
+                        ResetEmailLauncher(
+                            onNavigateBack = { navController.popBackStack() },
+                            onSendSuccess = { email ->
+                                navController.navigate(ResetOtpVerificationScreen(email))
+                            }
+                        )
+                    }
+
+                    composable<ResetOtpVerificationScreen> { backStackEntry ->
+                        val email = backStackEntry.toRoute<ResetOtpVerificationScreen>().email
+                        OtpLauncher(
+                            onNavigateBack = { navController.popBackStack() },
+                            onVerificationSuccess = { otp ->
+                                navController.navigate(ResetPasswordScreen(email, otp?.toIntOrNull() ?: 0))
+                            }
+                        )
+                    }
+
+                    composable<ResetPasswordScreen> {
+                        ResetPasswordLauncher(
+                            onNavigateBack = { navController.popBackStack() },
+                            onResetSuccess = {
+                                navController.navigate(LoginScreen) {
+                                    popUpTo(ResetPasswordEmailSendScreen) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+
+                    composable<HomeScreen> {
+                        HomeUi(
+                            onOpenDrawer = { scope.launch { drawerState.open() } },
+                            OnNavigateToPublicProfile = { navController.navigate(PublicProfileScreen) },
+                            OnNavigateToNotification = { navController.navigate(NotificationScreen) })
+                    }
+
+                    composable<MyJobsScreen> { PlaceholderScreen("My Jobs") }
+
+                    composable<PrivateProfileScreen> {
+                        PrivateProfileUi(
+                            onNavigateBack = { navController.popBackStack() },
+                            onEditProfile = {
+                                navController.navigate(ProfileUpdateScreen)
+                            },
+                            onLogout = {
+                                navController.navigate(LoginScreen) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+
+                    composable<ProfileUpdateScreen> {
+                        UpdateProfileUi(
+                            onNavigateBack = { navController.popBackStack() },
+                            onSaveSuccess = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+
+                    composable<PostJobScreen> {
+                        PostJobUi(
+                            onNavigateBack = { navController.popBackStack() },
+                            onPostSuccess = { navController.popBackStack() }
+                        )
+                    }
+
+                    composable<PublicProfileScreen> {
+                        PublicProfileUi(
+                            onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable<PublicJobDetailsScreen> {
+                        PublicJobDetailsUi(onNavigateBack = { navController.popBackStack() })
+                    }
+                    composable<PrivateJobDetails> { PlaceholderScreen("Private Job Details") }
+                    composable<SkipperScreen> { PlaceholderScreen("Skipper Screen") }
+                    composable<DetailsTakeScreen> { PlaceholderScreen("Details Take Screen") }
+                    composable<LoadingScreen> {
+                        LoadingLauncher(
+                            onNavigateToHome = {
+                                navController.navigate(HomeScreen) {
+                                    popUpTo(LoadingScreen) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+                    composable<NotificationScreen> { PlaceholderScreen("Notification Screen") }
+                }
+            }
+
+        }
+        // GLOBAL NETWORK OVERLAY
+        // Suppress during Splash animation to ensure logo is visible first
+        val shouldShowOverlay = (!isNetworkAvailable || isStabilizing) &&
+                (currentDestination?.hasRoute<SplashScreen>() == false || isAnimationFinished)
+
+        if (shouldShowOverlay) {
+            NetworkErrorScreen(
+                message = if (isStabilizing) "Connection restored! Stabilizing..." else "No Internet Connection",
+                isLoading = isStabilizing || splashState is SplashState.Loading,
+                onRetry = { mainViewModel.retryAuthCheck() }
+            )
+        }
+    }
 }
+
+
 
 @Composable
 fun AppDrawerContent(
     navController: NavHostController,
     currentDestination: NavDestination?,
     drawerState: DrawerState,
-    scope: CoroutineScope
+    scope: CoroutineScope,
+    onLogout: () -> Unit
 ) {
     ModalDrawerSheet(
         drawerShape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp),
@@ -266,15 +399,25 @@ fun AppDrawerContent(
         }
 
         Spacer(modifier = Modifier.weight(1f))
+
+        // Optional App Footer
+        Text(
+            text = "Version 1.0.0",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier
+                .padding(24.dp)
+                .align(Alignment.CenterHorizontally)
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
         HorizontalDivider()
 
         NavigationDrawerItem(
             label = { Text("Logout") },
             selected = false,
             onClick = {
-                navController.navigate(LoginScreen) {
-                    popUpTo(0) { inclusive = true }
-                }
+                onLogout()
                 scope.launch { drawerState.close() }
             },
             icon = { Icon(Icons.AutoMirrored.Filled.Logout, null) },
@@ -303,7 +446,7 @@ fun AppBottomBar(
                 icon = { Icon(item.icon, item.label) },
                 label = { Text(item.label) }
             )
-            
+
             // Add FAB in between the two bottom items
             if (index == 0) {
                 Box(
@@ -324,6 +467,7 @@ fun AppBottomBar(
             }
         }
     }
+
 }
 
 @Composable

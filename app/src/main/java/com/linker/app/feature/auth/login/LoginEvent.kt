@@ -21,6 +21,4 @@ sealed interface LoginEvent {
 
     object OnNavigateOtpVerificationClicked : LoginEvent
 
-    object onNavigateHomeClicked : LoginEvent
-
 }

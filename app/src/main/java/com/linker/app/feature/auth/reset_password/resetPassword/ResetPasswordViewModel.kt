@@ -1,26 +1,62 @@
 package com.linker.app.feature.auth.reset_password.resetPassword
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.linker.app.ResetPasswordScreen
+import com.linker.app.core.data.request.PasswordRequest
+import com.linker.app.core.network_api.NetworkResult
+import com.linker.app.core.network_api.repository.AuthRepository
+import androidx.navigation.toRoute
+import com.linker.app.core.datastore.TokenManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class ResetPasswordViewModel @Inject constructor() : ViewModel() {
+class ResetPasswordViewModel @Inject constructor(
+    private val authRepository: AuthRepository,
+    savedStateHandle: SavedStateHandle,
+    private val tokenManager: TokenManager
+) : ViewModel() {
 
     private val _state = MutableStateFlow(ResetPasswordUiState())
     val state: StateFlow<ResetPasswordUiState> = _state.asStateFlow()
 
     private val _effect = Channel<ResetPasswordEffect>()
     val effect = _effect.receiveAsFlow()
+
+    private var email: String = ""
+    private var otp: Int = 0
+
+    init {
+        val route = try {
+            savedStateHandle.toRoute<ResetPasswordScreen>()
+        } catch (e: Exception) {
+            null
+        }
+        
+        route?.let {
+            email = it.email
+            otp = it.otp
+        }
+    }
+
+    // Expose resetKey as a StateFlow
+    val resetKey: StateFlow<String?> = tokenManager.resetKey
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
 
     fun onEvent(event: ResetPasswordEvent) {
         when (event) {
@@ -53,9 +89,34 @@ class ResetPasswordViewModel @Inject constructor() : ViewModel() {
 
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            delay(1500) // Simulate API
-            _state.update { it.copy(isLoading = false) }
-            sendEffect(ResetPasswordEffect.ResetSuccess)
+
+            val currentResetKey = resetKey.value
+
+            if(currentResetKey.isNullOrBlank()){
+                sendEffect(ResetPasswordEffect.ShowError("Invalid reset key"))
+                return@launch
+            }
+
+            val request = PasswordRequest(
+                resetKey = currentResetKey, // Using resetKey as per backend requirements
+                resetPassword = currentPassword,
+                confirmPassword = currentConfirm
+            )
+
+            when (val result = authRepository.changePassword(request)) {
+                is NetworkResult.Success -> {
+                    _state.update { it.copy(isLoading = false) }
+                    tokenManager.clearResetKey()
+                    sendEffect(ResetPasswordEffect.ResetSuccess)
+                }
+                is NetworkResult.Failure -> {
+                    _state.update { it.copy(isLoading = false) }
+                    sendEffect(ResetPasswordEffect.ShowError(result.exception.message ?: "Reset failed"))
+                }
+                is NetworkResult.Loading -> {
+                    _state.update { it.copy(isLoading = true) }
+                }
+            }
         }
     }
 

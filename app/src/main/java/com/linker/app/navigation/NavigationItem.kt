@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -24,6 +25,7 @@ val drawerNavItems = listOf(
     NavigationItem("Home", Icons.Default.Home, HomeScreen),
     NavigationItem("My Jobs", Icons.Default.Work, MyJobsScreen),
     NavigationItem("Profile", Icons.Default.Person, PrivateProfileScreen),
-    NavigationItem("public job screen", Icons.Default.AccountCircle, PublicProfileScreen),
-    NavigationItem("Post a Job", Icons.Default.Add, PostJobScreen)
+    NavigationItem("Notifications", Icons.Default.Notifications, NotificationScreen),
+    NavigationItem("Post a Job", Icons.Default.Add, PostJobScreen),
+    NavigationItem("Account", Icons.Default.AccountCircle, PublicJobDetailsScreen)
 )

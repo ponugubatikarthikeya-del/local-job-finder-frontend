@@ -21,11 +21,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.linker.app.domain.models.JobCard
-import com.linker.app.domain.models.JobStatusEnum
-import com.linker.app.domain.models.JobTypeEnum
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.linker.app.core.data.models.JobCard
+import com.linker.app.core.util.enums.JobStatusEnum
 import com.linker.app.ui.theme.LocalJobFinderTheme
-import java.math.BigDecimal
 import java.util.*
 
 // Dummy Data Models
@@ -34,9 +34,14 @@ data class Category(val name: String, val icon: ImageVector)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeUi(
+    viewModel: HomeViewModel = hiltViewModel(),
     onOpenDrawer: () -> Unit = {},
-    OnNavigateToPublicProfile: () -> Unit = {}
+    OnNavigateToPublicProfile: () -> Unit = {},
+    OnNavigateToPublicCardDetials : () -> Unit = {},
+    OnNavigateToNotification : () -> Unit = {}
 ) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
     val categories = remember {
         listOf(
             Category("Plumbing", Icons.Default.Build),
@@ -50,23 +55,6 @@ fun HomeUi(
             Category("Cooking", Icons.Default.Restaurant),
             Category("Moving", Icons.Default.LocalShipping)
         )
-    }
-
-    val jobs = remember {
-        List(10) { index ->
-            JobCard(
-                id = index.toLong(),
-                userId = 100L + index,
-                username = "John Doe",
-                title = if (index % 2 == 0) "Professional Plumber Needed" else "House Cleaning Service",
-                category = if (index % 2 == 0) "Plumbing" else "Cleaning",
-                payAmount = BigDecimal((500..2000).random()),
-                jobType = if (index % 3 == 0) JobTypeEnum.FULL_TIME else JobTypeEnum.PART_TIME,
-                address = "Vinukonda, AP",
-                status = JobStatusEnum.OPEN,
-                distance = (1.0 + (index * 0.5))
-            )
-        }
     }
 
     Scaffold(
@@ -104,7 +92,7 @@ fun HomeUi(
                     }
                 },
                 actions = {
-                    IconButton(onClick = {}) {
+                    IconButton(onClick = {OnNavigateToNotification()}) {
                         Icon(imageVector = Icons.Default.Notifications, contentDescription = "Notifications")
                     }
                 },
@@ -147,10 +135,11 @@ fun HomeUi(
             }
 
             // Jobs List
-            items(jobs) { job ->
+            items(state.jobs) { job ->
                 JobCardItem(
                     job = job,
-                    onNavigateToPublicProfile = OnNavigateToPublicProfile
+                    onNavigateToPublicProfile = OnNavigateToPublicProfile,
+                    onNavigateToPublicCardDetails = OnNavigateToPublicCardDetials
                 )
             }
         }
@@ -226,12 +215,13 @@ fun CategoryItem(category: Category) {
 @Composable
 fun JobCardItem(
     job: JobCard,
-    onNavigateToPublicProfile: () -> Unit
+    onNavigateToPublicProfile: () -> Unit,
+    onNavigateToPublicCardDetails: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp).clickable { onNavigateToPublicCardDetails()},
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),

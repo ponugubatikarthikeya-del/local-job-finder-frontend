@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.collectLatest
 fun ResetEmailLauncher(
     viewModel: ResetEmailViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
-    onSendSuccess: () -> Unit
+    onSendSuccess: (String) -> Unit
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -21,7 +21,7 @@ fun ResetEmailLauncher(
     LaunchedEffect(Unit) {
         viewModel.effect.collectLatest { effect ->
             when (effect) {
-                is ResetEmailEffect.SendSuccess -> onSendSuccess()
+                is ResetEmailEffect.SendSuccess -> onSendSuccess(effect.email)
                 is ResetEmailEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
                 }

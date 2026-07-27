@@ -1,0 +1,4 @@
+- [ ] Suppress global network overlay during splash animation in `AppNavGraph.kt`
+- [ ] Verify `OtpViewModel` routes to Signup API and stores tokens
+- [ ] Verify `MainViewModel` correctly routes authenticated users
+- [ ] Final build and flow check

@@ -100,8 +100,8 @@ fun PublicProfileUi(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 StatItem(count = "1", label = "post")
-                                StatItem(count = "195", label = "followers")
-                                StatItem(count = "185", label = "following")
+                                StatItem(count = "4.5", label = "rating")
+                                StatItem(count = "185", label = "completed")
                             }
                         }
                     }
@@ -129,37 +129,37 @@ fun PublicProfileUi(
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF262626))
                         ) {
-                            Text("Following", color = Color.White)
+                            Text("Connect", color = Color.White)
                         }
-                        Button(
-                            onClick = { },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF262626))
-                        ) {
-                            Text("Message", color = Color.White)
-                        }
+//                        Button(
+//                            onClick = { },
+//                            modifier = Modifier.weight(1f),
+//                            shape = RoundedCornerShape(8.dp),
+//                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF262626))
+//                        ) {
+//                            Text("Message", color = Color.White)
+//                        }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Mutual Followers
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        // Tiny avatars stack
-                        Box {
-                            Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(Color.Gray).border(1.dp, Color.Black, CircleShape))
-                            Box(modifier = Modifier.padding(start = 12.dp).size(24.dp).clip(CircleShape).background(Color.LightGray).border(1.dp, Color.Black, CircleShape))
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Followed by royalstag_raghava, __sai._27 and 10 more",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.LightGray
-                        )
-                    }
+//                    // Mutual Followers
+//                    Row(
+//                        verticalAlignment = Alignment.CenterVertically,
+//                        modifier = Modifier.fillMaxWidth()
+//                    ) {
+//                        // Tiny avatars stack
+//                        Box {
+//                            Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(Color.Gray).border(1.dp, Color.Black, CircleShape))
+//                            Box(modifier = Modifier.padding(start = 12.dp).size(24.dp).clip(CircleShape).background(Color.LightGray).border(1.dp, Color.Black, CircleShape))
+//                        }
+//                        Spacer(modifier = Modifier.width(8.dp))
+//                        Text(
+//                            text = "Followed by royalstag_raghava, __sai._27 and 10 more",
+//                            style = MaterialTheme.typography.labelSmall,
+//                            color = Color.LightGray
+//                        )
+//                    }
                 }
             }
         }

@@ -23,7 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.linker.app.core.designsystem.components.AppTextField
+import com.linker.app.core.util.components.AppTextField
 import com.linker.app.ui.theme.LocalJobFinderTheme
 
 @Composable
@@ -90,7 +90,7 @@ fun SignupUi(
                     onValueChange = { onEvent(SignupEvent.OnEmailChanged(it)) },
                     label = "Enter email",
                     leadingIcon = Icons.Outlined.Email,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 )
 
                 Spacer(Modifier.height(10.dp))
@@ -179,7 +179,8 @@ fun SignupUi(
                         modifier = Modifier.weight(1f).height(56.dp),
                         shape = MaterialTheme.shapes.medium
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(4.dp)) {
                             Icon(
                                 imageVector = Icons.Default.Facebook,
                                 contentDescription = "Facebook",

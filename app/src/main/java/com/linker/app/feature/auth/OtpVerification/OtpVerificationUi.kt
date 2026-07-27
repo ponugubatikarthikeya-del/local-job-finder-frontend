@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -34,11 +35,9 @@ fun OtpVerificationUi(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
-                .padding(24.dp),
+                .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            Spacer(Modifier.height(30.dp))
 
             IconButton(
                 onClick = onBack,
@@ -58,10 +57,18 @@ fun OtpVerificationUi(
                 fontWeight = FontWeight.Bold,
             )
 
+            Spacer(Modifier.height(5.dp))
+
+            Text(
+                text = "Account Verification",
+                style = MaterialTheme.typography.titleSmall,
+                fontStyle = FontStyle.Italic,
+            )
+
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = "An authentication code has been sent to",
+                text = "An authentication code has been sent to your email",
                 color = Color.Gray,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -80,10 +87,11 @@ fun OtpVerificationUi(
             BasicTextField(
                 value = state.otp,
                 onValueChange = { onEvent(OtpEvent.OnOtpChanged(it)) },
+                enabled = !state.isLoading,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                 decorationBox = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        repeat(4) { index ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        repeat(6) { index ->
                             val char = when {
                                 index >= state.otp.length -> ""
                                 else -> state.otp[index].toString()
@@ -92,7 +100,7 @@ fun OtpVerificationUi(
 
                             Box(
                                 modifier = Modifier
-                                    .size(64.dp)
+                                    .size(width = 52.dp, height = 60.dp)
                                     .border(
                                         width = if (isFocused) 2.dp else 1.dp,
                                         color = if (isFocused) MaterialTheme.colorScheme.primary else Color.LightGray,
@@ -124,8 +132,11 @@ fun OtpVerificationUi(
                     fontSize = 14.sp
                 )
                 if (state.timerTicks > 0) {
+                    val minutes = state.timerTicks / 60
+                    val seconds = state.timerTicks % 60
+
                     Text(
-                        text = "Resend in 0:${state.timerTicks.toString().padStart(2, '0')}",
+                        text = "Resend in $minutes:${seconds.toString().padStart(2, '0')}",
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
@@ -152,7 +163,7 @@ fun OtpVerificationUi(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF2563EB) // Professional Blue
                 ),
-                enabled = state.otp.length == 4 && !state.isLoading
+                enabled = state.otp.length == 6 && !state.isLoading
             ) {
                 if (state.isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)

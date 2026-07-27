@@ -1,0 +1,4 @@
+- [x] Downgrade `kotlinx-serialization` version in `libs.versions.toml`
+- [x] Make `OtpViewModel` safer when retrieving arguments
+- [x] Provide default value for `email` in `SignupOtpVerificationScreen`
+- [x] Add connectivity troubleshooting notes to walkthrough
