@@ -1,6 +1,8 @@
 package com.linker.app.navigation
 
+import android.app.Activity
 import android.view.Window
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -34,10 +36,13 @@ import com.linker.app.feature.auth.reset_password.resetEmailEvent.ResetEmailLaun
 import com.linker.app.feature.auth.reset_password.resetPassword.ResetPasswordLauncher
 import com.linker.app.feature.auth.signup.SignupLauncher
 import com.linker.app.feature.screens.error.NetworkErrorScreen
-import com.linker.app.feature.screens.home.HomeUi
-import com.linker.app.feature.screens.job.post_jobs.PostJobUi
-import com.linker.app.feature.screens.job.public_job_details.PublicJobDetailsUi
-import com.linker.app.feature.screens.profile.private_profile.PrivateProfileUi
+import com.linker.app.feature.screens.profile.user_data_receive.UserDataTakenLauncher
+import com.linker.app.feature.screens.home.HomeLauncher
+import com.linker.app.feature.screens.job.my_jobs.MyJobsLauncher
+import com.linker.app.feature.screens.job.post_jobs.PostJobLauncher
+import com.linker.app.feature.screens.job.public_job_details.PublicJobDetailsLauncher
+import com.linker.app.feature.screens.profile.private_profile.PrivateProfileLauncher
+import com.linker.app.feature.screens.profile.profile_update.UpdateProfileLauncher
 import com.linker.app.feature.screens.profile.profile_update.UpdateProfileUi
 import com.linker.app.feature.screens.profile.public_profile.PublicProfileUi
 import com.linker.app.main.MainViewModel
@@ -54,6 +59,8 @@ fun AppNavGraph(
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val activityContext = androidx.compose.ui.platform.LocalContext.current
+    var showExitDialog by remember { mutableStateOf(false) }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -99,6 +106,17 @@ fun AppNavGraph(
         }
     }
 
+    // Global Logout Observer: Jump to Login if session becomes Unauthenticated while inside the app
+    LaunchedEffect(splashState) {
+        if (splashState is SplashState.Unauthenticated && 
+            currentDestination?.let { it.hasRoute<SplashScreen>() || it.hasRoute<LoginScreen>() } == false
+        ) {
+            navController.navigate(LoginScreen) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+
     // Visibility logic for Bars - hide on Auth and Splash screens
     val isMainScreen = currentDestination?.let { dest ->
         !dest.hasRoute<LoginScreen>() &&
@@ -117,7 +135,7 @@ fun AppNavGraph(
     Box(modifier = Modifier.fillMaxSize()) {
         ModalNavigationDrawer(
             drawerState = drawerState,
-            gesturesEnabled = isMainScreen && isNetworkAvailable, // Disable drawer gestures when offline
+            gesturesEnabled = currentDestination?.hasRoute<HomeScreen>() == true && isNetworkAvailable, // Only enable drawer gestures on Home screen when online
             drawerContent = {
                 AppDrawerContent(
                     navController = navController,
@@ -125,7 +143,7 @@ fun AppNavGraph(
                     drawerState = drawerState,
                     scope = scope,
                     onLogout = {
-                        mainViewModel.logout()
+                        mainViewModel.logout(allDevices = false)
                         navController.navigate(LoginScreen) {
                             popUpTo(0) { inclusive = true }
                         }
@@ -207,6 +225,7 @@ fun AppNavGraph(
 
                     composable<SignupOtpVerificationScreen> {
                         OtpLauncher(
+                            isResetFlow = false, // Explicitly false
                             onNavigateBack = { navController.popBackStack() },
                             onVerificationSuccess = {
                                 navController.navigate(LoadingScreen) {
@@ -228,6 +247,7 @@ fun AppNavGraph(
                     composable<ResetOtpVerificationScreen> { backStackEntry ->
                         val email = backStackEntry.toRoute<ResetOtpVerificationScreen>().email
                         OtpLauncher(
+                            isResetFlow = true, // Explicitly true
                             onNavigateBack = { navController.popBackStack() },
                             onVerificationSuccess = { otp ->
                                 navController.navigate(ResetPasswordScreen(email, otp?.toIntOrNull() ?: 0))
@@ -247,21 +267,38 @@ fun AppNavGraph(
                     }
 
                     composable<HomeScreen> {
-                        HomeUi(
+                        BackHandler {
+                            showExitDialog = true
+                        }
+                        HomeLauncher(
                             onOpenDrawer = { scope.launch { drawerState.open() } },
-                            OnNavigateToPublicProfile = { navController.navigate(PublicProfileScreen) },
-                            OnNavigateToNotification = { navController.navigate(NotificationScreen) })
+                            onNavigateToPublicProfile = { navController.navigate(PublicProfileScreen) },
+                            onNavigateToPublicCardDetails = { job ->
+                                navController.navigate(PublicJobDetailsScreen(job.id, showApplyButton = true))
+                            },
+                            onNavigateToNotification = { navController.navigate(NotificationScreen) }
+                        )
                     }
 
-                    composable<MyJobsScreen> { PlaceholderScreen("My Jobs") }
+                    composable<MyJobsScreen> {
+                        MyJobsLauncher(
+                            onNavigateBack = { navController.popBackStack() },
+                            onNavigateToJobDetails = { job ->
+                                navController.navigate(PublicJobDetailsScreen(job.id, showApplyButton = false))
+                            }
+                        )
+                    }
 
                     composable<PrivateProfileScreen> {
-                        PrivateProfileUi(
+                        PrivateProfileLauncher(
                             onNavigateBack = { navController.popBackStack() },
                             onEditProfile = {
                                 navController.navigate(ProfileUpdateScreen)
                             },
-                            onLogout = {
+                            onViewPublicProfile = {
+                                navController.navigate(PublicProfileScreen)
+                            },
+                            onLogoutComplete = {
                                 navController.navigate(LoginScreen) {
                                     popUpTo(0) { inclusive = true }
                                 }
@@ -270,7 +307,7 @@ fun AppNavGraph(
                     }
 
                     composable<ProfileUpdateScreen> {
-                        UpdateProfileUi(
+                        UpdateProfileLauncher(
                             onNavigateBack = { navController.popBackStack() },
                             onSaveSuccess = {
                                 navController.popBackStack()
@@ -279,9 +316,12 @@ fun AppNavGraph(
                     }
 
                     composable<PostJobScreen> {
-                        PostJobUi(
+                        val context = androidx.compose.ui.platform.LocalContext.current
+                        PostJobLauncher(
                             onNavigateBack = { navController.popBackStack() },
-                            onPostSuccess = { navController.popBackStack() }
+                            onShowToast = { message ->
+                                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+                            }
                         )
                     }
 
@@ -290,16 +330,35 @@ fun AppNavGraph(
                             onNavigateBack = { navController.popBackStack() }
                         )
                     }
-                    composable<PublicJobDetailsScreen> {
-                        PublicJobDetailsUi(onNavigateBack = { navController.popBackStack() })
+                    composable<PublicJobDetailsScreen> { backStackEntry ->
+                        val route = backStackEntry.toRoute<PublicJobDetailsScreen>()
+                        PublicJobDetailsLauncher(
+                            jobId = route.jobId,
+                            showApplyButton = route.showApplyButton,
+                            onNavigateBack = { navController.popBackStack() }
+                        )
                     }
                     composable<PrivateJobDetails> { PlaceholderScreen("Private Job Details") }
                     composable<SkipperScreen> { PlaceholderScreen("Skipper Screen") }
-                    composable<DetailsTakeScreen> { PlaceholderScreen("Details Take Screen") }
+                    composable<DetailsTakeScreen> {
+                        UserDataTakenLauncher(
+                            onNavigateToLoading = {
+                                // 🟢 Route back through LoadingScreen so jobs fetch during the 3s loading window
+                                navController.navigate(LoadingScreen) {
+                                    popUpTo(DetailsTakeScreen) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
                     composable<LoadingScreen> {
                         LoadingLauncher(
                             onNavigateToHome = {
                                 navController.navigate(HomeScreen) {
+                                    popUpTo(LoadingScreen) { inclusive = true }
+                                }
+                            },
+                            onNavigateToDetailsTake = {
+                                navController.navigate(DetailsTakeScreen) {
                                     popUpTo(LoadingScreen) { inclusive = true }
                                 }
                             }
@@ -311,15 +370,40 @@ fun AppNavGraph(
 
         }
         // GLOBAL NETWORK OVERLAY
-        // Suppress during Splash animation to ensure logo is visible first
+        // Refined Logic: Don't show global overlay if we're on Splash, Loading, Login, or Signup.
+        // These screens handle their own network error UI to prevent "blinking" and layout fighting
+        // during the critical startup and authentication flow.
         val shouldShowOverlay = (!isNetworkAvailable || isStabilizing) &&
-                (currentDestination?.hasRoute<SplashScreen>() == false || isAnimationFinished)
+                currentDestination?.let { dest ->
+                    !dest.hasRoute<SplashScreen>() &&
+                    !dest.hasRoute<LoadingScreen>() &&
+                    !dest.hasRoute<LoginScreen>() &&
+                    !dest.hasRoute<SignupScreen>()
+                } ?: false
 
         if (shouldShowOverlay) {
             NetworkErrorScreen(
                 message = if (isStabilizing) "Connection restored! Stabilizing..." else "No Internet Connection",
                 isLoading = isStabilizing || splashState is SplashState.Loading,
                 onRetry = { mainViewModel.retryAuthCheck() }
+            )
+        }
+
+        if (showExitDialog) {
+            AlertDialog(
+                onDismissRequest = { showExitDialog = false },
+                title = { Text("Exit App") },
+                text = { Text("Are you sure you want to exit the application?") },
+                confirmButton = {
+                    TextButton(onClick = { (activityContext as? Activity)?.finish() }) {
+                        Text("Exit")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showExitDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
             )
         }
     }
@@ -386,10 +470,12 @@ fun AppDrawerContent(
                 label = { Text(item.label) },
                 selected = currentDestination?.hasRoute(item.route::class) == true,
                 onClick = {
-                    navController.navigate(item.route) {
-                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
+                    if (currentDestination?.hasRoute(item.route::class) == false) {
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                     scope.launch { drawerState.close() }
                 },
@@ -437,10 +523,12 @@ fun AppBottomBar(
             NavigationBarItem(
                 selected = currentDestination?.hasRoute(item.route::class) == true,
                 onClick = {
-                    navController.navigate(item.route) {
-                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
+                    if (currentDestination?.hasRoute(item.route::class) == false) {
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 },
                 icon = { Icon(item.icon, item.label) },
@@ -454,7 +542,14 @@ fun AppBottomBar(
                     contentAlignment = Alignment.Center
                 ) {
                     FloatingActionButton(
-                        onClick = { navController.navigate(PostJobScreen) },
+                        onClick = {
+                            if (currentDestination?.hasRoute<PostJobScreen>() == false) {
+                                navController.navigate(PostJobScreen) {
+                                    popUpTo<HomeScreen> { saveState = true }
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         shape = CircleShape,

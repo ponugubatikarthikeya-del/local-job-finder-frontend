@@ -7,7 +7,8 @@ data class EditProfileRequest(
     val username: String? = null,
     val phone: String? = null,
     val headline: String? = null,
-    val skills: String? = null,
+    val dateOfBirth: String? = null,
+    val skills: List<String>? = null,
     val cityName: String? = null,
     val userDescription: String? = null
 )

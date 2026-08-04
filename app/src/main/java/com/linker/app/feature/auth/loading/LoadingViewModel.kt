@@ -2,6 +2,7 @@ package com.linker.app.feature.auth.loading
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.linker.app.core.datastore.TokenManager
 import com.linker.app.core.network_api.repository.JobRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -9,6 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -16,6 +18,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class LoadingViewModel @Inject constructor(
+    private val tokenManager: TokenManager,
     private val jobRepository: JobRepository
 ) : ViewModel (){
 
@@ -48,19 +51,60 @@ class LoadingViewModel @Inject constructor(
         _state.update { it.copy(isLoading = true, quote = randomQuote) }
 
         viewModelScope.launch {
-            // Start fetching jobs in parallel and store in Room
-            launch {
-                jobRepository.syncJobs()
+            // Read fresh location flags from DataStore
+            val hasAddress = tokenManager.hasEnteredAddress.first()
+
+            // Start fetching jobs in parallel if address exists
+            if (hasAddress) {
+                launch {
+                    val lat = tokenManager.latitude.first()?.toDoubleOrNull()
+                    val lng = tokenManager.longitude.first()?.toDoubleOrNull()
+                    if (lat != null && lng != null) {
+                        jobRepository.getActiveJobsNearby(lat, lng)
+                    }
+                }
             }
 
-            // Minimum 3 seconds delay
+            // Minimum 3 seconds loading screen presentation
             delay(3000)
-            
-            // Wait for sync to complete if it hasn't already (optional, but good for data consistency)
-            // jobsSyncJob.join() 
-            
+
             _state.update { it.copy(isLoading = false) }
-            sendEffect(LoadingEffect.onNavigateToHome)
+
+            if (hasAddress) {
+                sendEffect(LoadingEffect.NavigateToHome)
+            } else {
+                sendEffect(LoadingEffect.NavigateToDetailsTake)
+            }
         }
     }
+
+//    private fun performLoading() {
+//        val randomQuote = quotes.random()
+//        _state.update { it.copy(isLoading = true, quote = randomQuote) }
+//
+//        viewModelScope.launch {
+//            // Check if user has entered address
+//            val hasAddress = tokenManager.hasEnteredAddress.first()
+//
+//            // Start fetching jobs in parallel if address exists
+//            if (hasAddress) {
+//                launch {
+//                    val lat = tokenManager.latitude.first()?.toBigDecimalOrNull() ?: java.math.BigDecimal("12.9716")
+//                    val lng = tokenManager.longitude.first()?.toBigDecimalOrNull() ?: java.math.BigDecimal("77.5946")
+//                    jobRepository.getActiveJobsNearby(lat, lng)
+//                }
+//            }
+//
+//            // Minimum 3 seconds delay
+//            delay(3000)
+//
+//            _state.update { it.copy(isLoading = false) }
+//
+//            if (hasAddress) {
+//                sendEffect(LoadingEffect.NavigateToHome)
+//            } else {
+//                sendEffect(LoadingEffect.NavigateToDetailsTake)
+//            }
+//        }
+//    }
 }

@@ -10,14 +10,16 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun LoadingLauncher(
     viewModel: LoadingViewModel = hiltViewModel(),
-    onNavigateToHome: () -> Unit
+    onNavigateToHome: () -> Unit,
+    onNavigateToDetailsTake: () -> Unit
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.effect.collectLatest { effect ->
             when (effect) {
-                is LoadingEffect.onNavigateToHome -> onNavigateToHome()
+                is LoadingEffect.NavigateToHome -> onNavigateToHome()
+                is LoadingEffect.NavigateToDetailsTake -> onNavigateToDetailsTake()
                 is LoadingEffect.ShowError -> {
                     // Handle error if needed
                 }

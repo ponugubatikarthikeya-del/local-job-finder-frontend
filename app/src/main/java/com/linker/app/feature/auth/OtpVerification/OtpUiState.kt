@@ -4,7 +4,7 @@ data class OtpUiState(
     val otp: String = "",
     val email: String = "",
     val resetKey : String = "",
-    val timerTicks: Int = 30,
+    val timerTicks: Int = 300,
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )

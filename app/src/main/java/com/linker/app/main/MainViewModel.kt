@@ -7,6 +7,7 @@ import com.linker.app.core.network_api.AppException
 import com.linker.app.core.network_api.NetworkResult
 import com.linker.app.core.network_api.connection.NetworkConnectivityObserver
 import com.linker.app.core.network_api.repository.AuthRepository
+import com.linker.app.core.network_api.repository.JobRepository
 import com.linker.app.main.splash.SplashState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,25 +21,30 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val tokenManager: TokenManager,
     private val authRepository: AuthRepository,
+    private val jobRepository: JobRepository,
     networkConnectivityObserver: NetworkConnectivityObserver
 ) : ViewModel() {
 
     private val _isStabilizing = MutableStateFlow(false)
     val isStabilizing = _isStabilizing.asStateFlow()
 
+    private var stabilizationJob: kotlinx.coroutines.Job? = null
+
     // 2. Expose real-time connectivity as a StateFlow with stabilization logic
     val isNetworkAvailable: StateFlow<Boolean> = networkConnectivityObserver.isConnected
         .onEach { isConnected ->
+            stabilizationJob?.cancel() // Cancel any pending stabilization to avoid blinks
             if (isConnected) {
                 // When internet returns, trigger 3-second stabilization
-                viewModelScope.launch {
+                stabilizationJob = viewModelScope.launch {
                     _isStabilizing.value = true
-                    delay(3000)
+                    delay(3000.milliseconds)
                     _isStabilizing.value = false
                 }
             } else {
@@ -94,7 +100,7 @@ class MainViewModel @Inject constructor(
             _splashState.value = SplashState.Loading
             
             // Force 3-second delay as per requirement
-            delay(3000)
+            delay(3000.milliseconds)
 
             val refreshToken = tokenManager.refreshToken.firstOrNull()
             performTokenRefresh(refreshToken)
@@ -141,9 +147,13 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun logout() {
+    fun logout(allDevices: Boolean = false) {
         viewModelScope.launch {
-            tokenManager.clearTokens()
+            // Attempt to logout from server. We don't block on success, 
+            // as we want to clear local session anyway.
+            authRepository.logout(allDevices)
+            tokenManager.clearAll()
+            jobRepository.clearJobs()
             _splashState.value = SplashState.Unauthenticated
         }
     }

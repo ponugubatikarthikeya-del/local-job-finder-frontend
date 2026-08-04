@@ -3,7 +3,6 @@ package com.linker.app.feature.auth.reset_password.resetPassword
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.linker.app.ResetPasswordScreen
 import com.linker.app.core.data.request.PasswordRequest
 import com.linker.app.core.network_api.NetworkResult
 import com.linker.app.core.network_api.repository.AuthRepository
@@ -38,16 +37,9 @@ class ResetPasswordViewModel @Inject constructor(
     private var otp: Int = 0
 
     init {
-        val route = try {
-            savedStateHandle.toRoute<ResetPasswordScreen>()
-        } catch (e: Exception) {
-            null
-        }
-        
-        route?.let {
-            email = it.email
-            otp = it.otp
-        }
+        // Retrieve arguments directly from SavedStateHandle to avoid navigation casting issues.
+        email = savedStateHandle["email"] ?: ""
+        otp = savedStateHandle["otp"] ?: 0
     }
 
     // Expose resetKey as a StateFlow

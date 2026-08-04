@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import com.linker.app.core.database.app_database.JobDatabase
 import com.linker.app.core.database.dao.JobDao
+import com.linker.app.core.database.dao.MyJobDao
+import com.linker.app.core.database.dao.UserDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,12 +24,25 @@ object DatabaseModule {
             context,
             JobDatabase::class.java,
             "local_job_finder_db"
-        ).build()
+        ).fallbackToDestructiveMigration(true)
+            .build()
     }
 
     @Provides
     @Singleton
     fun provideJobDao(database: JobDatabase): JobDao {
         return database.jobDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideUserDao(database: JobDatabase): UserDao {
+        return database.userDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideMyJobDao(database: JobDatabase): MyJobDao {
+        return database.myJobDao()
     }
 }

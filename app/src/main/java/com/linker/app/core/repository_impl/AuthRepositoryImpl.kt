@@ -75,4 +75,10 @@ class AuthRepositoryImpl @Inject constructor(
             apiService.resendOtp(request)
         }
     }
+
+    override suspend fun logout(allDevices: Boolean): NetworkResult<AuthResponse> {
+        return safeApiCall(ioDispatcher) {
+            apiService.logout(deviceId = "DEFAULT_DEVICE", allDevices = allDevices)
+        }
+    }
 }

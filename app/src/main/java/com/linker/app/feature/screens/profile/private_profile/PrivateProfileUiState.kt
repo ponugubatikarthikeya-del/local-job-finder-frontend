@@ -1,4 +1,9 @@
 package com.linker.app.feature.screens.profile.private_profile
 
-class PrivateProfileUiState {
-}
+import com.linker.app.core.data.models.User
+
+data class PrivateProfileUiState(
+    val user: User? = null,
+    val isLoading: Boolean = false,
+    val error: String? = null
+)
