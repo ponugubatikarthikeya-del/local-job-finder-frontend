@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @HiltViewModel
@@ -77,7 +78,13 @@ class PrivateProfileViewModel @Inject constructor(
     private fun logout(allDevices: Boolean) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            authRepository.logout(allDevices)
+            val deviceId = tokenManager.getOrCreateDeviceId()
+            val fcmToken = try {
+                com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()
+            } catch (_: Exception) {
+                ""
+            }
+            authRepository.logout(deviceId, allDevices, fcmToken)
             tokenManager.clearAll()
             jobRepository.clearJobs()
             profileRepository.clearProfile()

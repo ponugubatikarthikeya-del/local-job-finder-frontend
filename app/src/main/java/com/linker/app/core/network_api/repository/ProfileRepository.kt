@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 interface ProfileRepository {
     suspend fun updateAddress(request: AddressTakeRequest): NetworkResult<ProfileResponse>
     suspend fun getMyProfile(): NetworkResult<Unit>
+    suspend fun getPublicProfile(jobId: Long): NetworkResult<com.linker.app.core.data.responses.PublicProfileResponse>
     suspend fun updateProfile(request: EditProfileRequest): NetworkResult<ProfileResponse>
     fun getUserProfileFlow(): Flow<User?>
     suspend fun clearProfile()

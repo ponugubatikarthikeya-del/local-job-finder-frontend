@@ -6,10 +6,10 @@ import java.time.Instant
 data class UserDto(
     val id: Long,
     val username: String,
-    val email: String,
+    val email: String? = null,
     val phone: String? = null,
     val headline: String? = null,
-    val skills: List<String> = emptyList(),
+    val skills: List<String>? = null,
     val dateOfBirth: String? = null,
     val cityName: String? = null,
     val rating: BigDecimal = BigDecimal.ZERO,

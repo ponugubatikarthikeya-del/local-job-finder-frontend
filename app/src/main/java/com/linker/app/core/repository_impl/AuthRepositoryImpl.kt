@@ -1,23 +1,25 @@
 package com.linker.app.core.repository_impl
 
 import com.linker.app.core.data.request.EmailCheckupRequest
-import com.linker.app.core.data.request.PasswordRequest
+import com.linker.app.core.data.request.FcmTokenRequest
 import com.linker.app.core.data.request.LoginRequest
+import com.linker.app.core.data.request.PasswordRequest
 import com.linker.app.core.data.request.ResetPasswordOtpValidateRequest
 import com.linker.app.core.data.request.SignupOtpValidationRequest
-import com.linker.app.core.network_api.api.AuthApiService
-import com.linker.app.core.network_api.NetworkResult
-import com.linker.app.core.network_api.safeApiCall
 import com.linker.app.core.data.request.SignupRequest
 import com.linker.app.core.data.responses.AuthResponse
 import com.linker.app.core.data.responses.LoginResponse
 import com.linker.app.core.data.responses.RefreshTokenResponse
 import com.linker.app.core.data.responses.ResetKeyOtpResponse
 import com.linker.app.core.datastore.TokenManager
-
+import com.linker.app.core.network_api.NetworkResult
+import com.linker.app.core.network_api.api.AuthApiService
 import com.linker.app.core.network_api.repository.AuthRepository
+import com.linker.app.core.network_api.safeApiCall
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 class AuthRepositoryImpl @Inject constructor(
@@ -76,9 +78,19 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun logout(allDevices: Boolean): NetworkResult<AuthResponse> {
+    override suspend fun logout(deviceId: String, allDevices: Boolean, fcmToken: String): NetworkResult<AuthResponse> {
         return safeApiCall(ioDispatcher) {
-            apiService.logout(deviceId = "DEFAULT_DEVICE", allDevices = allDevices)
+            val response = apiService.logout(
+                deviceId = deviceId,
+                allDevices = allDevices,
+                fcmTokenRequest = FcmTokenRequest(fcmToken)
+            )
+            try {
+                FirebaseMessaging.getInstance().deleteToken().await()
+            } catch (e: Exception) {
+                android.util.Log.e("AUTH_REPO", "Failed to delete FCM token locally", e)
+            }
+            response
         }
     }
 }

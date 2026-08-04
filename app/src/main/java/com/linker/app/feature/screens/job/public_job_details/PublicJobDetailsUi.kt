@@ -1,6 +1,7 @@
 package com.linker.app.feature.screens.job.public_job_details
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -43,6 +44,13 @@ fun PublicJobDetailsUi(
                     IconButton(onClick = { onEvent(PublicJobDetailsEvent.OnBackClicked) }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
+                },
+                actions = {
+                    if (state.showDeleteButton) {
+                        IconButton(onClick = { onEvent(PublicJobDetailsEvent.OnViewApplicantsClicked) }) {
+                            Icon(imageVector = Icons.Default.Groups, contentDescription = "View Applicants")
+                        }
+                    }
                 }
             )
         },
@@ -74,13 +82,68 @@ fun PublicJobDetailsUi(
                         }
                         if (state.showApplyButton) {
                             Button(
-                                onClick = { },
+                                onClick = { onEvent(PublicJobDetailsEvent.OnApplyClicked) },
                                 modifier = Modifier
                                     .height(56.dp)
                                     .weight(1.5f),
-                                shape = RoundedCornerShape(16.dp)
+                                shape = RoundedCornerShape(16.dp),
+                                enabled = !state.isApplying && !state.isApplied,
+                                colors = if (state.isApplied) {
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        disabledContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        disabledContentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                } else {
+                                    ButtonDefaults.buttonColors()
+                                }
                             ) {
-                                Text("Apply Now", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                when {
+                                    state.isApplying -> {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            strokeWidth = 2.dp
+                                        )
+                                    }
+                                    state.isApplied -> {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Applied", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    }
+                                    else -> {
+                                        Text("Apply Now", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    }
+                                }
+                            }
+                        } else if (state.showDeleteButton) {
+                            Button(
+                                onClick = { onEvent(PublicJobDetailsEvent.OnDeleteClicked) },
+                                modifier = Modifier
+                                    .height(56.dp)
+                                    .weight(1.5f),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error
+                                ),
+                                enabled = !state.isDeleting
+                            ) {
+                                if (state.isDeleting) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = MaterialTheme.colorScheme.onError,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Icon(Icons.Default.Delete, contentDescription = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Delete Job", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                }
                             }
                         }
                     }
@@ -119,7 +182,10 @@ fun PublicJobDetailsUi(
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { onEvent(PublicJobDetailsEvent.OnProfileClicked) }
+                            ) {
                                 Box(
                                     modifier = Modifier
                                         .size(50.dp)

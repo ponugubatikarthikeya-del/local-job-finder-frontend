@@ -11,7 +11,7 @@ import com.linker.app.core.data.models.HomeJobCard
 fun HomeLauncher(
     viewModel: HomeViewModel = hiltViewModel(),
     onOpenDrawer: () -> Unit,
-    onNavigateToPublicProfile: () -> Unit,
+    onNavigateToPublicProfile: (Long) -> Unit,
     onNavigateToPublicCardDetails: (HomeJobCard) -> Unit,
     onNavigateToNotification: () -> Unit
 ) {
@@ -21,7 +21,7 @@ fun HomeLauncher(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is HomeEffect.OpenDrawer -> onOpenDrawer()
-                is HomeEffect.NavigateToPublicProfile -> onNavigateToPublicProfile()
+                is HomeEffect.NavigateToPublicProfile -> onNavigateToPublicProfile(effect.jobId)
                 is HomeEffect.NavigateToPublicCardDetails -> onNavigateToPublicCardDetails(effect.job)
                 is HomeEffect.NavigateToNotification -> onNavigateToNotification()
             }

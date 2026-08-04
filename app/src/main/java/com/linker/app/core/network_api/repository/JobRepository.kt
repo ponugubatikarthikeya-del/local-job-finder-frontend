@@ -17,6 +17,9 @@ interface JobRepository {
     ): NetworkResult<Unit>
 
     suspend fun postJob(request: PostJobRequest): NetworkResult<UserResponse>
+    suspend fun applyJob(jobId: Long): NetworkResult<Unit>
+    suspend fun viewApplicants(jobId: Long, page: Int = 0, size: Int = 20): NetworkResult<com.linker.app.core.data.responses.ViewApplicantsResponse>
+    suspend fun deleteJob(jobId: Long): NetworkResult<Unit>
     suspend fun getMyJobs(page: Int = 0, size: Int = 20): NetworkResult<Unit>
     suspend fun searchJobs(
         lat: Double,

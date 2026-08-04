@@ -8,7 +8,7 @@ sealed interface HomeEvent {
     data object OnSearchClicked : HomeEvent
     data class OnCategorySelected(val category: String?) : HomeEvent
     data class OnJobClicked(val job: HomeJobCard) : HomeEvent
-    data object OnProfileClicked : HomeEvent
+    data class OnProfileClicked(val jobId: Long) : HomeEvent
     data object OnNotificationClicked : HomeEvent
     data object OnMenuClicked : HomeEvent
 }

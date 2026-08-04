@@ -10,7 +10,7 @@ data class UserEntity(
     @PrimaryKey
     val id: Long,
     val username: String,
-    val email: String,
+    val email: String? = null,
     val phone: String? = null,
     val headline: String? = null,
     val skills: List<String> = emptyList(),

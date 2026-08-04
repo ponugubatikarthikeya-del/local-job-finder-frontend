@@ -402,7 +402,7 @@ fun JobCardItem(
             
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { onEvent(HomeEvent.OnProfileClicked) }
+                modifier = Modifier.clickable { onEvent(HomeEvent.OnProfileClicked(job.id)) }
             ) {
                 Surface(
                     modifier = Modifier.size(20.dp),

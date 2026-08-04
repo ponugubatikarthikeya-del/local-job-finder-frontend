@@ -17,6 +17,9 @@ interface MyJobDao {
     @Query("SELECT * FROM my_jobs WHERE id = :jobId")
     suspend fun getMyJobById(jobId: Long): MyJobEntity?
 
+    @Query("DELETE FROM my_jobs WHERE id = :jobId")
+    suspend fun deleteMyJobById(jobId: Long)
+
     @Query("DELETE FROM my_jobs")
     suspend fun deleteAllMyJobs()
 }

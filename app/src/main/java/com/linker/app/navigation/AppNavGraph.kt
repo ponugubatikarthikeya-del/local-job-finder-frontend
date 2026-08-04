@@ -41,10 +41,11 @@ import com.linker.app.feature.screens.home.HomeLauncher
 import com.linker.app.feature.screens.job.my_jobs.MyJobsLauncher
 import com.linker.app.feature.screens.job.post_jobs.PostJobLauncher
 import com.linker.app.feature.screens.job.public_job_details.PublicJobDetailsLauncher
+import com.linker.app.feature.screens.job.view_applicants.ViewApplicantsLauncher
 import com.linker.app.feature.screens.profile.private_profile.PrivateProfileLauncher
 import com.linker.app.feature.screens.profile.profile_update.UpdateProfileLauncher
 import com.linker.app.feature.screens.profile.profile_update.UpdateProfileUi
-import com.linker.app.feature.screens.profile.public_profile.PublicProfileUi
+import com.linker.app.feature.screens.profile.public_profile.PublicProfileLauncher
 import com.linker.app.main.MainViewModel
 import com.linker.app.main.splash.SplashState
 import com.linker.app.main.splash.SplashScreen as SplashScreenUi
@@ -272,7 +273,9 @@ fun AppNavGraph(
                         }
                         HomeLauncher(
                             onOpenDrawer = { scope.launch { drawerState.open() } },
-                            onNavigateToPublicProfile = { navController.navigate(PublicProfileScreen) },
+                            onNavigateToPublicProfile = { jobId -> 
+                                navController.navigate(PublicProfileScreen(jobId)) 
+                            },
                             onNavigateToPublicCardDetails = { job ->
                                 navController.navigate(PublicJobDetailsScreen(job.id, showApplyButton = true))
                             },
@@ -284,7 +287,7 @@ fun AppNavGraph(
                         MyJobsLauncher(
                             onNavigateBack = { navController.popBackStack() },
                             onNavigateToJobDetails = { job ->
-                                navController.navigate(PublicJobDetailsScreen(job.id, showApplyButton = false))
+                                navController.navigate(PublicJobDetailsScreen(job.id, showApplyButton = false, showDeleteButton = true))
                             }
                         )
                     }
@@ -325,8 +328,10 @@ fun AppNavGraph(
                         )
                     }
 
-                    composable<PublicProfileScreen> {
-                        PublicProfileUi(
+                    composable<PublicProfileScreen> { backStackEntry ->
+                        val route = backStackEntry.toRoute<PublicProfileScreen>()
+                        PublicProfileLauncher(
+                            jobId = route.jobId,
                             onNavigateBack = { navController.popBackStack() }
                         )
                     }
@@ -335,6 +340,23 @@ fun AppNavGraph(
                         PublicJobDetailsLauncher(
                             jobId = route.jobId,
                             showApplyButton = route.showApplyButton,
+                            showDeleteButton = route.showDeleteButton,
+                            onNavigateBack = { navController.popBackStack() },
+                            onNavigateToViewApplicants = { jobId ->
+                                navController.navigate(ViewApplicantsScreen(jobId))
+                            },
+                            onNavigateToPublicProfile = { jobId ->
+                                navController.navigate(PublicProfileScreen(jobId))
+                            },
+                            onNavigateToPrivateProfile = {
+                                navController.navigate(PrivateProfileScreen)
+                            }
+                        )
+                    }
+                    composable<ViewApplicantsScreen> { backStackEntry ->
+                        val route = backStackEntry.toRoute<ViewApplicantsScreen>()
+                        ViewApplicantsLauncher(
+                            jobId = route.jobId,
                             onNavigateBack = { navController.popBackStack() }
                         )
                     }

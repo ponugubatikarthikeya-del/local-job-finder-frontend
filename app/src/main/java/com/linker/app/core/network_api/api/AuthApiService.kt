@@ -1,9 +1,9 @@
 package com.linker.app.core.network_api.api
 
-
 import com.linker.app.core.data.request.EmailCheckupRequest
-import com.linker.app.core.data.request.PasswordRequest
+import com.linker.app.core.data.request.FcmTokenRequest
 import com.linker.app.core.data.request.LoginRequest
+import com.linker.app.core.data.request.PasswordRequest
 import com.linker.app.core.data.request.ResetPasswordOtpValidateRequest
 import com.linker.app.core.data.request.SignupOtpValidationRequest
 import com.linker.app.core.data.request.SignupRequest
@@ -12,20 +12,24 @@ import com.linker.app.core.data.responses.LoginResponse
 import com.linker.app.core.data.responses.RefreshTokenResponse
 import com.linker.app.core.data.responses.ResetKeyOtpResponse
 import retrofit2.http.Body
-import retrofit2.http.DELETE
+import retrofit2.http.GET
+import retrofit2.http.HTTP
 import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 interface AuthApiService {
 
     @POST("user/auth/signup")
     suspend fun signup(@Body request: SignupRequest): AuthResponse
+
     @POST("user/auth/signupOtp-verification")
     suspend fun verifyOtp(@Body request: SignupOtpValidationRequest): LoginResponse
 
     @POST("user/auth/login")
     suspend fun login(@Body request: LoginRequest): LoginResponse
+
     @POST("user/auth/refresh/token")
     suspend fun refreshTokens(@Header("Authorization") refreshToken: String): RefreshTokenResponse
 
@@ -41,10 +45,11 @@ interface AuthApiService {
     @POST("user/auth/resend-otp")
     suspend fun resendOtp(@Body request: EmailCheckupRequest): AuthResponse
 
-    @DELETE("user/auth/logout")
+    @HTTP(method = "DELETE", path = "user/auth/logout", hasBody = true)
     suspend fun logout(
         @Header("X-Device-Id") deviceId: String = "DEFAULT_DEVICE",
         @Header("Authorization") token: String = "Bearer AUTO",
-        @retrofit2.http.Query("allDevices") allDevices: Boolean = false
+        @Query("allDevices") allDevices: Boolean = false,
+        @Body fcmTokenRequest: FcmTokenRequest
     ): AuthResponse
 }

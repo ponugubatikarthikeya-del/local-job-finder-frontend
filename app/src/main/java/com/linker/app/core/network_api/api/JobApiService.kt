@@ -3,10 +3,13 @@ package com.linker.app.core.network_api.api
 
 import com.linker.app.core.data.request.PostJobRequest
 import com.linker.app.core.data.responses.AllJobsResponse
+import com.linker.app.core.data.responses.JobResponse
 import com.linker.app.core.data.responses.UserResponse
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface JobApiService {
@@ -23,6 +26,11 @@ interface JobApiService {
     suspend fun postJob(
         @Body request: PostJobRequest
     ): UserResponse
+
+    @DELETE("user/job/deleteJob/{jobId}")
+    suspend fun deleteJob(
+        @Path("jobId") jobId: Long
+    ): JobResponse
 
     @GET("user/job/filter/getMyJobs")
     suspend fun getMyJobs(

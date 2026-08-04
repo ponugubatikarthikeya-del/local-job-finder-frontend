@@ -11,7 +11,7 @@ import com.linker.app.core.database.entity.JobEntity
 import com.linker.app.core.database.entity.MyJobEntity
 import com.linker.app.core.database.entity.UserEntity
 
-@Database(entities = [JobEntity::class, UserEntity::class, MyJobEntity::class], version = 6, exportSchema = false)
+@Database(entities = [JobEntity::class, UserEntity::class, MyJobEntity::class], version = 7, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class JobDatabase : RoomDatabase() {
     abstract fun jobDao(): JobDao
