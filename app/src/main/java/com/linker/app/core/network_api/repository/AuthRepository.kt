@@ -24,5 +24,5 @@ interface AuthRepository {
 
     suspend fun resendOtp(request: EmailCheckupRequest): NetworkResult<AuthResponse>
 
-    suspend fun logout(allDevices: Boolean): NetworkResult<AuthResponse>
+    suspend fun logout(deviceId: String, allDevices: Boolean, fcmToken: String): NetworkResult<AuthResponse>
 }

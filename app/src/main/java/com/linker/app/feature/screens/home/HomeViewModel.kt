@@ -62,7 +62,7 @@ class HomeViewModel @Inject constructor(
             }
             is HomeEvent.OnProfileClicked -> {
                 viewModelScope.launch {
-                    _effect.send(HomeEffect.NavigateToPublicProfile)
+                    _effect.send(HomeEffect.NavigateToPublicProfile(event.jobId))
                 }
             }
             is HomeEvent.OnNotificationClicked -> {

@@ -5,6 +5,7 @@ import com.linker.app.core.database.dao.MyJobDao
 import com.linker.app.core.database.entity.JobEntity
 import com.linker.app.core.database.entity.MyJobEntity
 import com.linker.app.core.network_api.AppException
+import com.linker.app.core.network_api.api.ApplicationsApiService
 import com.linker.app.core.network_api.api.JobApiService
 import com.linker.app.core.network_api.NetworkResult
 import com.linker.app.core.data.models.HomeJobCard
@@ -21,6 +22,7 @@ import javax.inject.Inject
 
 class JobRepositoryImpl @Inject constructor(
     private val apiService: JobApiService,
+    private val applicationsApiService: ApplicationsApiService,
     private val jobDao: JobDao,
     private val myJobDao: MyJobDao,
     private val ioDispatcher: CoroutineDispatcher
@@ -55,6 +57,48 @@ class JobRepositoryImpl @Inject constructor(
         try {
             val response = apiService.postJob(request)
             NetworkResult.Success(response)
+        } catch (e: retrofit2.HttpException) {
+            NetworkResult.Failure(AppException.ServerException(e.code(), e.message()))
+        } catch (e: java.io.IOException) {
+            NetworkResult.Failure(AppException.NetworkException("No internet connection", e))
+        } catch (e: Exception) {
+            NetworkResult.Failure(AppException.UnknownException(e.localizedMessage ?: "Unknown error"))
+        }
+    }
+
+    override suspend fun applyJob(jobId: Long): NetworkResult<Unit> = withContext(ioDispatcher) {
+        try {
+            applicationsApiService.applyJob(jobId)
+            NetworkResult.Success(Unit)
+        } catch (e: retrofit2.HttpException) {
+            NetworkResult.Failure(AppException.ServerException(e.code(), e.message()))
+        } catch (e: java.io.IOException) {
+            NetworkResult.Failure(AppException.NetworkException("No internet connection", e))
+        } catch (e: Exception) {
+            NetworkResult.Failure(AppException.UnknownException(e.localizedMessage ?: "Unknown error"))
+        }
+    }
+
+    override suspend fun viewApplicants(jobId: Long, page: Int, size: Int): NetworkResult<com.linker.app.core.data.responses.ViewApplicantsResponse> = withContext(ioDispatcher) {
+        try {
+            val response = applicationsApiService.viewApplicants(jobId, page, size)
+            NetworkResult.Success(response)
+        } catch (e: retrofit2.HttpException) {
+            NetworkResult.Failure(AppException.ServerException(e.code(), e.message()))
+        } catch (e: java.io.IOException) {
+            NetworkResult.Failure(AppException.NetworkException("No internet connection", e))
+        } catch (e: Exception) {
+            NetworkResult.Failure(AppException.UnknownException(e.localizedMessage ?: "Unknown error"))
+        }
+    }
+
+    override suspend fun deleteJob(jobId: Long): NetworkResult<Unit> = withContext(ioDispatcher) {
+        try {
+            apiService.deleteJob(jobId)
+            // Also delete from local database
+            jobDao.deleteJobById(jobId)
+            myJobDao.deleteMyJobById(jobId)
+            NetworkResult.Success(Unit)
         } catch (e: retrofit2.HttpException) {
             NetworkResult.Failure(AppException.ServerException(e.code(), e.message()))
         } catch (e: java.io.IOException) {

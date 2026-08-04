@@ -132,7 +132,7 @@ fun PrivateProfileUi(
 
                         // Details Section
                         SectionHeader(title = "Contact Information")
-                        DetailCard(Icons.Default.Email, "Email", user.email)
+                        DetailCard(Icons.Default.Email, "Email", user.email ?: "Not provided")
                         DetailCard(Icons.Default.Phone, "Phone", user.phone ?: "Not provided")
 
                         Spacer(modifier = Modifier.height(16.dp))

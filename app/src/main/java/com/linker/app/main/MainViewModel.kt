@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -149,9 +150,13 @@ class MainViewModel @Inject constructor(
 
     fun logout(allDevices: Boolean = false) {
         viewModelScope.launch {
-            // Attempt to logout from server. We don't block on success, 
-            // as we want to clear local session anyway.
-            authRepository.logout(allDevices)
+            val deviceId = tokenManager.getOrCreateDeviceId()
+            val fcmToken = try {
+                com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()
+            } catch (_: Exception) {
+                ""
+            }
+            authRepository.logout(deviceId, allDevices, fcmToken)
             tokenManager.clearAll()
             jobRepository.clearJobs()
             _splashState.value = SplashState.Unauthenticated

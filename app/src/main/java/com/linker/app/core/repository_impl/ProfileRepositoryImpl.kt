@@ -54,6 +54,19 @@ class ProfileRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getPublicProfile(jobId: Long): NetworkResult<com.linker.app.core.data.responses.PublicProfileResponse> = withContext(ioDispatcher) {
+        try {
+            val response = apiService.getPublicProfile(jobId)
+            NetworkResult.Success(response)
+        } catch (e: retrofit2.HttpException) {
+            NetworkResult.Failure(AppException.ServerException(e.code(), e.message()))
+        } catch (e: java.io.IOException) {
+            NetworkResult.Failure(AppException.NetworkException("No internet connection", e))
+        } catch (e: Exception) {
+            NetworkResult.Failure(AppException.UnknownException(e.localizedMessage ?: "Unknown error"))
+        }
+    }
+
     override suspend fun updateProfile(request: EditProfileRequest): NetworkResult<ProfileResponse> = withContext(ioDispatcher) {
         try {
             val response = apiService.updateProfile(request)
@@ -84,7 +97,7 @@ class ProfileRepositoryImpl @Inject constructor(
         email = email,
         phone = phone,
         headline = headline,
-        skills = skills,
+        skills = skills ?: emptyList(),
         dateOfBirth = dateOfBirth,
         cityName = cityName,
         rating = rating,

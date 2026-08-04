@@ -1,4 +1,5 @@
 package com.linker.app.feature.screens.profile.public_profile
 
-class PublicProfileEvent {
+sealed interface PublicProfileEvent {
+    data object OnBackClicked : PublicProfileEvent
 }

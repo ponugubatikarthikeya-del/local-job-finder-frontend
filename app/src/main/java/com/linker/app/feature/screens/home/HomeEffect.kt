@@ -4,7 +4,7 @@ import com.linker.app.core.data.models.HomeJobCard
 
 sealed interface HomeEffect {
     data object OpenDrawer : HomeEffect
-    data object NavigateToPublicProfile : HomeEffect
+    data class NavigateToPublicProfile(val jobId: Long) : HomeEffect
     data class NavigateToPublicCardDetails(val job: HomeJobCard) : HomeEffect
     data object NavigateToNotification : HomeEffect
 }

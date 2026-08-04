@@ -2,8 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- 🟢 1. Required for Android 13+ (API 33+) to show Notification Banners -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- 🟢 3. Optional: Allows phone to vibrate when notification arrives -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:name=".LocalJobFinderApplication"
@@ -17,6 +23,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.LocalJobFinder.Splash">
+
         <activity
             android:name=".main.MainActivity"
             android:exported="true"
@@ -29,6 +36,28 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-    </application>
 
+        <!-- 🔴 Disabling Facebook SDK auto-init and notification handling to prevent NumberFormatException
+             from fields like 'ta' in FCM payloads, which some versions of the SDK attempt to parse as Integers. -->
+        <meta-data android:name="com.facebook.sdk.AutoInitEnabled"
+            android:value="false"/>
+        <meta-data android:name="com.facebook.sdk.AutoLogAppEventsEnabled"
+            android:value="false"/>
+        <meta-data android:name="com.facebook.sdk.AutoHandleNotifications"
+            android:value="false"/>
+
+<!--        &lt;!&ndash; 🟢 5. Optional Default Channel & Notification Icon Metadata &ndash;&gt;-->
+<!--        <meta-data-->
+<!--            android:name="com.google.firebase.messaging.default_notification_channel_id"-->
+<!--            android:value="job_notifications_channel" />-->
+
+        <service
+            android:name=".fcm.MyFcmListenerService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+    </application>
 </manifest>

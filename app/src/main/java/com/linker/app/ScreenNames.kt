@@ -39,7 +39,7 @@ object HomeScreen
 object ProfileUpdateScreen
 
 @Serializable
-object PublicProfileScreen
+data class PublicProfileScreen(val jobId: Long)
 
 @Serializable
 object PrivateProfileScreen
@@ -48,13 +48,20 @@ object PrivateProfileScreen
 object PostJobScreen
 
 @Serializable
-data class PublicJobDetailsScreen(val jobId: Long, val showApplyButton: Boolean = true)
+data class PublicJobDetailsScreen(
+    val jobId: Long,
+    val showApplyButton: Boolean = true,
+    val showDeleteButton: Boolean = false
+)
 
 @Serializable
 object PrivateJobDetails
 
 @Serializable
 object MyJobsScreen
+
+@Serializable
+data class ViewApplicantsScreen(val jobId: Long)
 
 @Serializable
 object NotificationScreen
