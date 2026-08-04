@@ -1,8 +1,9 @@
 package com.linker.app.core.data.responses
 
+import java.time.Instant
 
 data class UserResponse(
-    val timestamp: String,
+    val timestamp: Instant,
     val status: Int = 0,
     val errorCode: String? = null,
     val message: String? = null,

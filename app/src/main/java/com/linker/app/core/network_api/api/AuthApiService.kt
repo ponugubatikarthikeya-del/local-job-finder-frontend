@@ -12,6 +12,7 @@ import com.linker.app.core.data.responses.LoginResponse
 import com.linker.app.core.data.responses.RefreshTokenResponse
 import com.linker.app.core.data.responses.ResetKeyOtpResponse
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
@@ -39,4 +40,11 @@ interface AuthApiService {
 
     @POST("user/auth/resend-otp")
     suspend fun resendOtp(@Body request: EmailCheckupRequest): AuthResponse
+
+    @DELETE("user/auth/logout")
+    suspend fun logout(
+        @Header("X-Device-Id") deviceId: String = "DEFAULT_DEVICE",
+        @Header("Authorization") token: String = "Bearer AUTO",
+        @retrofit2.http.Query("allDevices") allDevices: Boolean = false
+    ): AuthResponse
 }

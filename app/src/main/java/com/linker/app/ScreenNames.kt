@@ -48,7 +48,7 @@ object PrivateProfileScreen
 object PostJobScreen
 
 @Serializable
-object PublicJobDetailsScreen
+data class PublicJobDetailsScreen(val jobId: Long, val showApplyButton: Boolean = true)
 
 @Serializable
 object PrivateJobDetails

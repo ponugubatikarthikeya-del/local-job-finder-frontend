@@ -8,6 +8,11 @@ import com.linker.app.core.network_api.repository.AuthRepository
 import com.linker.app.core.network_api.repository.JobRepository
 import com.linker.app.core.datastore.TokenManager
 import com.linker.app.core.database.dao.JobDao
+import com.linker.app.core.database.dao.MyJobDao
+import com.linker.app.core.database.dao.UserDao
+import com.linker.app.core.network_api.api.ProfileApiService
+import com.linker.app.core.repository_impl.ProfileRepositoryImpl
+import com.linker.app.core.network_api.repository.ProfileRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -34,8 +39,19 @@ object RepositoryModule {
     fun provideJobRepository(
         apiService: JobApiService,
         jobDao: JobDao,
+        myJobDao: MyJobDao,
         ioDispatcher: CoroutineDispatcher
     ): JobRepository {
-        return JobRepositoryImpl(apiService, jobDao, ioDispatcher)
+        return JobRepositoryImpl(apiService, jobDao, myJobDao, ioDispatcher)
+    }
+
+    @Provides
+    @Singleton
+    fun provideProfileRepository(
+        apiService: ProfileApiService,
+        userDao: UserDao,
+        ioDispatcher: CoroutineDispatcher
+    ): ProfileRepository {
+        return ProfileRepositoryImpl(apiService, userDao, ioDispatcher)
     }
 }

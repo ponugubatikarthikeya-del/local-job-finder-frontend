@@ -11,12 +11,18 @@ import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun OtpLauncher(
+    isResetFlow: Boolean, // Explicitly pass the flow mode down
     viewModel: OtpViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
     onVerificationSuccess: (String?) -> Unit
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Sync the configuration flag explicitly when entering the composable screen
+    LaunchedEffect(isResetFlow) {
+        viewModel.setFlowMode(isResetFlow)
+    }
 
     LaunchedEffect(Unit) {
         viewModel.effect.collectLatest { effect ->

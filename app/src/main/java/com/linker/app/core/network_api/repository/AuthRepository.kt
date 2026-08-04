@@ -23,4 +23,6 @@ interface AuthRepository {
     suspend fun changePassword(request: PasswordRequest): NetworkResult<AuthResponse>
 
     suspend fun resendOtp(request: EmailCheckupRequest): NetworkResult<AuthResponse>
+
+    suspend fun logout(allDevices: Boolean): NetworkResult<AuthResponse>
 }

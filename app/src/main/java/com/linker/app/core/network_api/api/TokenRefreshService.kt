@@ -11,5 +11,7 @@ import retrofit2.http.POST
  */
 interface TokenRefreshService {
     @POST("user/auth/refresh/token")
-    fun refreshTokens(@Header("Authorization") refreshToken: String): Call<RefreshTokenResponse>
+    fun refreshTokens(
+        @Header("Authorization") refreshToken: String,
+    ): Call<RefreshTokenResponse>
 }

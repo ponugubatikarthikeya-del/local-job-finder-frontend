@@ -27,5 +27,5 @@ val drawerNavItems = listOf(
     NavigationItem("Profile", Icons.Default.Person, PrivateProfileScreen),
     NavigationItem("Notifications", Icons.Default.Notifications, NotificationScreen),
     NavigationItem("Post a Job", Icons.Default.Add, PostJobScreen),
-    NavigationItem("Account", Icons.Default.AccountCircle, PublicJobDetailsScreen)
+//    NavigationItem("Account", Icons.Default.AccountCircle, PrivateProfileScreen)
 )

@@ -3,7 +3,6 @@ package com.linker.app.feature.auth.OtpVerification
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.linker.app.ResetOtpVerificationScreen
 import com.linker.app.SignupOtpVerificationScreen
 import com.linker.app.core.datastore.TokenManager
 import com.linker.app.core.network_api.NetworkResult
@@ -28,9 +27,10 @@ import kotlin.time.Duration.Companion.milliseconds
 class OtpViewModel @Inject constructor(
     private val repository: AuthRepository,
     private val tokenManager: TokenManager,
-    savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
+    private var timerJob: kotlinx.coroutines.Job? = null
     private val _state = MutableStateFlow(OtpUiState())
     val state: StateFlow<OtpUiState> = _state.asStateFlow()
 
@@ -40,29 +40,17 @@ class OtpViewModel @Inject constructor(
     private var isResetFlow = false
 
     init {
-        val signupRoute = try {
-            savedStateHandle.toRoute<SignupOtpVerificationScreen>()
-        } catch (e: Exception) {
-            null
+        // Safely pull the email value directly out of the SavedStateHandle.
+        // This avoids the "Cannot cast Boolean to ArrayList" crash in Navigation 2.8.0.
+        val emailArg: String? = savedStateHandle["email"]
+        emailArg?.let { email ->
+            _state.update { it.copy(email = email) }
         }
-
-        val resetRoute = try {
-            savedStateHandle.toRoute<ResetOtpVerificationScreen>()
-        } catch (e: Exception) {
-            null
-        }
-        
-        signupRoute?.let { route ->
-            _state.update { it.copy(email = route.email) }
-            isResetFlow = false
-        }
-
-        resetRoute?.let { route ->
-            _state.update { it.copy(email = route.email) }
-            isResetFlow = true
-        }
-        
         startTimer()
+    }
+
+    fun setFlowMode(isReset: Boolean) {
+        this.isResetFlow = isReset
     }
 
     fun onEvent(event: OtpEvent) {
@@ -80,8 +68,19 @@ class OtpViewModel @Inject constructor(
         }
     }
 
+//    private fun startTimer() {
+//        viewModelScope.launch {
+//            _state.update { it.copy(timerTicks = 300) }
+//            while (_state.value.timerTicks > 0) {
+//                delay(1000.milliseconds)
+//                _state.update { it.copy(timerTicks = it.timerTicks - 1) }
+//            }
+//        }
+//    }
+
     private fun startTimer() {
-        viewModelScope.launch {
+        timerJob?.cancel() // Cancel the active timer loop before launching a new one
+        timerJob = viewModelScope.launch {
             _state.update { it.copy(timerTicks = 300) }
             while (_state.value.timerTicks > 0) {
                 delay(1000.milliseconds)
@@ -120,10 +119,11 @@ class OtpViewModel @Inject constructor(
             return
         }
 
+        // FIXED: True calls reset, false calls signup
         if (isResetFlow) {
-            performSignupOtpVerification()
-        } else {
             performResetOtpVerification()
+        } else {
+            performSignupOtpVerification()
         }
     }
 
@@ -153,14 +153,17 @@ class OtpViewModel @Inject constructor(
 
             // Specifically calls the Signup OTP Verification API as per requirements
             when (val result = repository.verifyOtp(request)) {
+                // Inside performSignupOtpVerification()
                 is NetworkResult.Success -> {
                     tokenManager.saveTokens(
                         accessToken = result.data.accessToken,
                         refreshToken = result.data.refreshToken
                     )
                     _state.update { it.copy(isLoading = false) }
-                    _effect.send(OtpEffect.VerificationSuccess())
+                    // FIXED: Forward the code parameter instead of sending a null default
+                    _effect.send(OtpEffect.VerificationSuccess(currentOtp))
                 }
+
                 is NetworkResult.Failure -> {
                     _state.update { it.copy(isLoading = false, errorMessage = result.exception.message) }
                     _effect.send(OtpEffect.ShowError(result.exception.message ?: "Verification failed"))

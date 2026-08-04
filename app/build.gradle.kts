@@ -81,7 +81,7 @@ dependencies {
     implementation(libs.androidx.compose.material3.windowSizeClass)
     implementation(libs.kotlinx.serialization.json) // For safe routing
 
-    implementation(libs.androidx.google.fonts)
+    // implementation(libs.androidx.google.fonts)
 
     // 5. Room Database
     implementation(libs.androidx.room.runtime)

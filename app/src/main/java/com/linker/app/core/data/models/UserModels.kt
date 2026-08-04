@@ -7,13 +7,13 @@ data class User(
     val id: Long,
     val username: String,
     val email: String,
-    val phone: String,
-    val headline: String,
-    val skills: String,
-    val dateOfBirth: String,
-    val cityName: String,
-    val rating: BigDecimal,
-    val totalJobsCompleted: Int,
-    val userDescription: String,
-    val createdAt: Instant
+    val phone: String? = null,
+    val headline: String? = null,
+    val skills: List<String> = emptyList(),
+    val dateOfBirth: String? = null,
+    val cityName: String? = null,
+    val rating: BigDecimal = BigDecimal.ZERO,
+    val totalJobsCompleted: Int = 0,
+    val userDescription: String? = null,
+    val createdAt: Instant = Instant.now()
 )
