@@ -92,6 +92,7 @@ dependencies {
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging.ktx)
+    implementation(libs.grpc.android)
 
     // For handling easy await extensions on Firebase Tasks
     implementation(libs.kotlinx.coroutines.play.services)

@@ -1,8 +1,9 @@
 package com.linker.app.feature.screens.job.view_applicants
 
-import com.linker.app.core.data.responses.ApplicantDto
+import com.linker.app.core.data.models.ApplicantDto
 
 data class ViewApplicantsUiState(
+    val jobId: Long = 0,
     val applicants: List<ApplicantDto> = emptyList(),
     val totalElements: Long = 0,
     val totalPages: Int = 0,

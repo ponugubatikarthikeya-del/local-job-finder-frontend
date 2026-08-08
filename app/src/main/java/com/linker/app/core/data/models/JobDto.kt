@@ -1,4 +1,4 @@
-package com.linker.app.core.data.responses
+package com.linker.app.core.data.models
 
 import com.linker.app.core.util.enums.JobStatusEnum
 import com.linker.app.core.util.enums.JobTypeEnum

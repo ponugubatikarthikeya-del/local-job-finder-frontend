@@ -19,7 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.linker.app.core.data.responses.ApplicantDto
+import com.linker.app.core.data.models.ApplicantDto
 import com.linker.app.ui.theme.LocalJobFinderTheme
 import java.time.Instant
 import java.time.ZoneId
@@ -77,9 +77,13 @@ fun ViewApplicantsUi(
                     items(state.applicants) { applicant ->
                         ApplicantCard(
                             applicant = applicant,
-                            isLoading = state.isLoading,
-                            onAccept = { onEvent(ViewApplicantsEvent.AcceptApplicant(applicant.applicantId)) },
-                            onReject = { onEvent(ViewApplicantsEvent.RejectApplicant(applicant.applicantId)) }
+                            onAccept = { 
+                                onEvent(ViewApplicantsEvent.AcceptApplicant(applicant.displayApplicantId))
+                            },
+                            onReject = { 
+                                onEvent(ViewApplicantsEvent.RejectApplicant(applicant.displayApplicantId))
+                            },
+                            isProcessing = state.isLoading
                         )
                     }
                     
@@ -161,9 +165,9 @@ fun NotificationOverlays(state: ViewApplicantsUiState, onEvent: (ViewApplicantsE
 @Composable
 fun ApplicantCard(
     applicant: ApplicantDto,
-    isLoading: Boolean = false,
     onAccept: () -> Unit,
-    onReject: () -> Unit
+    onReject: () -> Unit,
+    isProcessing: Boolean = false
 ) {
     val status = applicant.status?.uppercase() ?: "PENDING"
     val formatter = try {
@@ -288,7 +292,7 @@ fun ApplicantCard(
                 ) {
                     OutlinedButton(
                         onClick = onReject,
-                        enabled = !isLoading,
+                        enabled = !isProcessing,
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFC62828)),
@@ -299,13 +303,40 @@ fun ApplicantCard(
                     
                     Button(
                         onClick = onAccept,
-                        enabled = !isLoading,
+                        enabled = !isProcessing,
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                     ) {
                         Text("Accept", fontWeight = FontWeight.Bold)
+                    }
+                }
+            } else {
+                Spacer(modifier = Modifier.height(24.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = when (status) {
+                        "ACCEPTED" -> Color(0xFFE8F5E9)
+                        "REJECTED" -> Color(0xFFFFEBEE)
+                        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    },
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (status == "ACCEPTED") "Application Accepted" else "Application Rejected",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = when (status) {
+                                "ACCEPTED" -> Color(0xFF2E7D32)
+                                "REJECTED" -> Color(0xFFC62828)
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
                     }
                 }
             }
@@ -317,9 +348,30 @@ fun ApplicantCard(
 @Composable
 fun ViewApplicantsPreview() {
     val dummyApplicants = listOf(
-        ApplicantDto(1, 1, "Karthikeya", "Android Developer", "PENDING", Instant.now()),
-        ApplicantDto(2, 2, "John Doe", "Web Developer", "ACCEPTED", Instant.now()),
-        ApplicantDto(3, 3, "Jane Smith", "UI/UX Designer", "REJECTED", Instant.now())
+        ApplicantDto(
+            id = 1,
+            userId = 1,
+            username = "Karthikeya",
+            headline = "Android Developer",
+            status = "PENDING",
+            appliedAt = Instant.now()
+        ),
+        ApplicantDto(
+            id = 2,
+            userId = 2,
+            username = "John Doe",
+            headline = "Web Developer",
+            status = "ACCEPTED",
+            appliedAt = Instant.now()
+        ),
+        ApplicantDto(
+            id = 3,
+            userId = 3,
+            username = "Jane Smith",
+            headline = "UI/UX Designer",
+            status = "REJECTED",
+            appliedAt = Instant.now()
+        )
     )
     LocalJobFinderTheme {
         ViewApplicantsUi(

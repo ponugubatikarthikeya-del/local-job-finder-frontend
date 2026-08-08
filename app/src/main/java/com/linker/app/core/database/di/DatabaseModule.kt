@@ -3,6 +3,7 @@ package com.linker.app.core.database.di
 import android.content.Context
 import androidx.room.Room
 import com.linker.app.core.database.app_database.JobDatabase
+import com.linker.app.core.database.dao.ApplicantDao
 import com.linker.app.core.database.dao.JobDao
 import com.linker.app.core.database.dao.MyJobDao
 import com.linker.app.core.database.dao.UserDao
@@ -44,5 +45,11 @@ object DatabaseModule {
     @Singleton
     fun provideMyJobDao(database: JobDatabase): MyJobDao {
         return database.myJobDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideApplicantDao(database: JobDatabase): ApplicantDao {
+        return database.applicantDao()
     }
 }

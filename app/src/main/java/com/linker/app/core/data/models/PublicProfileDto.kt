@@ -1,8 +1,8 @@
-package com.linker.app.core.data.responses
+package com.linker.app.core.data.models
 
+import com.linker.app.core.util.serializers.BigDecimalSerializer
 import kotlinx.serialization.Serializable
 import java.math.BigDecimal
-import com.linker.app.core.util.serializers.BigDecimalSerializer
 
 @Serializable
 data class PublicProfileDto(

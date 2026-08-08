@@ -1,5 +1,6 @@
 package com.linker.app.core.data.responses
 
+import com.linker.app.core.data.models.JobDto
 import java.time.Instant
 
 data class AllJobsResponse(

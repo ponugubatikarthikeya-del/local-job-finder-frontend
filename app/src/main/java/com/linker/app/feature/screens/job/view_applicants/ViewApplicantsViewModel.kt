@@ -2,6 +2,7 @@ package com.linker.app.feature.screens.job.view_applicants
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.linker.app.core.data.models.ApplicantDto
 import com.linker.app.core.network_api.NetworkResult
 import com.linker.app.core.network_api.repository.ApplicationsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -9,6 +10,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -25,22 +28,26 @@ class ViewApplicantsViewModel @Inject constructor(
     private val _effect = Channel<ViewApplicantsEffect>()
     val effect = _effect.receiveAsFlow()
 
-    private var currentJobId: Long? = null
-
     fun onEvent(event: ViewApplicantsEvent) {
         when (event) {
             is ViewApplicantsEvent.LoadApplicants -> {
-                currentJobId = event.jobId
-                loadApplicants(event.jobId)
+                _state.update { it.copy(jobId = event.jobId) }
+                observeApplicants(event.jobId)
             }
             is ViewApplicantsEvent.AcceptApplicant -> {
-                currentJobId?.let { jobId ->
+                val jobId = _state.value.jobId
+                if (jobId != 0L) {
                     acceptApplicant(jobId, event.applicantId)
+                } else {
+                    _state.update { it.copy(error = "Job ID missing") }
                 }
             }
             is ViewApplicantsEvent.RejectApplicant -> {
-                currentJobId?.let { jobId ->
+                val jobId = _state.value.jobId
+                if (jobId != 0L) {
                     rejectApplicant(jobId, event.applicantId)
+                } else {
+                    _state.update { it.copy(error = "Job ID missing") }
                 }
             }
             is ViewApplicantsEvent.ClearError -> {
@@ -57,20 +64,25 @@ class ViewApplicantsViewModel @Inject constructor(
         }
     }
 
-    private fun loadApplicants(jobId: Long) {
+    private fun observeApplicants(jobId: Long) {
+        applicationsRepository.getApplicantsFlow(jobId)
+            .onEach { list ->
+                _state.update { it.copy(applicants = sortApplicants(list)) }
+                
+                // 🟢 Only sync from network if Room is empty and we're not already loading
+                if (list.isEmpty() && !_state.value.isLoading) {
+                    syncApplicants(jobId)
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun syncApplicants(jobId: Long) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            when (val result = applicationsRepository.viewApplicants(jobId)) {
+            when (val result = applicationsRepository.syncApplicants(jobId)) {
                 is NetworkResult.Success -> {
-                    val response = result.data
-                    _state.update { it.copy(
-                        applicants = response.allJobs ?: emptyList(),
-                        totalElements = response.totalElements,
-                        totalPages = response.totalPages,
-                        pageNumber = response.pageNumber,
-                        isLast = response.isLast,
-                        isLoading = false
-                    ) }
+                    _state.update { it.copy(isLoading = false) }
                 }
                 is NetworkResult.Failure -> {
                     _state.update { it.copy(isLoading = false, error = result.exception.message) }
@@ -83,16 +95,26 @@ class ViewApplicantsViewModel @Inject constructor(
     }
 
     private fun acceptApplicant(jobId: Long, applicantId: Long) {
+        if (applicantId == 0L) {
+            _state.update { it.copy(error = "Invalid Application ID") }
+            return
+        }
+        
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isLoading = true) }
             when (val result = applicationsRepository.acceptApplicant(jobId, applicantId)) {
                 is NetworkResult.Success -> {
-                    _state.update { it.copy(successMessage = result.data.message ?: "Applicant accepted") }
-                    // Re-fetch to get updated statuses
-                    loadApplicants(jobId)
+                    _state.update { it.copy(
+                        successMessage = result.data.message ?: "Applicant accepted",
+                        isLoading = false
+                    ) }
+                    // Status is updated in Room by the repository, UI updates via Flow
                 }
                 is NetworkResult.Failure -> {
-                    _state.update { it.copy(isLoading = false, error = result.exception.message) }
+                    _state.update { it.copy(
+                        isLoading = false,
+                        error = result.exception.message
+                    ) }
                 }
                 is NetworkResult.Loading -> {
                     _state.update { it.copy(isLoading = true) }
@@ -102,21 +124,36 @@ class ViewApplicantsViewModel @Inject constructor(
     }
 
     private fun rejectApplicant(jobId: Long, applicantId: Long) {
+        if (applicantId == 0L) {
+            _state.update { it.copy(error = "Invalid Application ID") }
+            return
+        }
+
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isLoading = true) }
             when (val result = applicationsRepository.rejectApplicant(jobId, applicantId)) {
                 is NetworkResult.Success -> {
-                    _state.update { it.copy(successMessage = result.data.message ?: "Applicant rejected") }
-                    // Re-fetch to get updated statuses
-                    loadApplicants(jobId)
+                    _state.update { it.copy(
+                        successMessage = result.data.message ?: "Applicant rejected",
+                        isLoading = false
+                    ) }
                 }
                 is NetworkResult.Failure -> {
-                    _state.update { it.copy(isLoading = false, error = result.exception.message) }
+                    _state.update { it.copy(
+                        isLoading = false,
+                        error = result.exception.message
+                    ) }
                 }
                 is NetworkResult.Loading -> {
                     _state.update { it.copy(isLoading = true) }
                 }
             }
         }
+    }
+
+    private fun sortApplicants(list: List<ApplicantDto>): List<ApplicantDto> {
+        return list.sortedWith(compareBy { 
+            if (it.status?.uppercase() == "PENDING") 0 else 1 
+        })
     }
 }

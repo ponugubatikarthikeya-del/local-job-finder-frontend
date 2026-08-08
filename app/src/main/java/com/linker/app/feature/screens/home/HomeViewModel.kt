@@ -30,17 +30,21 @@ class HomeViewModel @Inject constructor(
     val effect = _effect.receiveAsFlow()
 
     private var searchJob: kotlinx.coroutines.Job? = null
+    private var refreshJob: kotlinx.coroutines.Job? = null
+    private var isInitialSyncAttempted = false
 
     init {
         observeJobs()
         observeAddress()
-        // Initial fetch to show nearby jobs on startup
-        syncJobs()
     }
 
     fun onEvent(event: HomeEvent) {
         when (event) {
-            is HomeEvent.OnRefresh -> syncJobs()
+            is HomeEvent.OnRefresh -> {
+                if (refreshJob?.isActive != true) {
+                    syncJobs()
+                }
+            }
             is HomeEvent.OnSearchQueryChanged -> {
                 _state.update { it.copy(searchQuery = event.query) }
                 if (event.query.isEmpty()) {
@@ -114,6 +118,20 @@ class HomeViewModel @Inject constructor(
         jobRepository.getJobsFlow()
             .onEach { jobs ->
                 _state.update { it.copy(jobs = jobs) }
+                
+                // Fix for multiple calls: 
+                // 1. Only sync if Room is empty 
+                // 2. AND we haven't attempted a sync yet in this session
+                // 3. AND we are not currently loading or filtering.
+                if (jobs.isEmpty() && 
+                    !isInitialSyncAttempted && 
+                    !_state.value.isLoading && 
+                    _state.value.searchQuery.isEmpty() && 
+                    _state.value.selectedCategory == null) {
+                    
+                    isInitialSyncAttempted = true
+                    syncJobs()
+                }
             }
             .launchIn(viewModelScope)
     }
@@ -127,7 +145,8 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun syncJobs() {
-        viewModelScope.launch {
+        if (refreshJob?.isActive == true) return
+        refreshJob = viewModelScope.launch {
             fetchJobs()
         }
     }

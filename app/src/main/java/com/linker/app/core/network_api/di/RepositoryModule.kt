@@ -1,5 +1,6 @@
 package com.linker.app.core.network_api.di
 
+import com.linker.app.core.database.dao.ApplicantDao
 import com.linker.app.core.database.dao.JobDao
 import com.linker.app.core.database.dao.MyJobDao
 import com.linker.app.core.database.dao.UserDao
@@ -75,8 +76,9 @@ object RepositoryModule {
     @Singleton
     fun provideApplicationsRepository(
         apiService: ApplicationsApiService,
+        applicantDao: ApplicantDao,
         ioDispatcher: CoroutineDispatcher
     ): ApplicationsRepository {
-        return ApplicationsRepositoryImpl(apiService, ioDispatcher)
+        return ApplicationsRepositoryImpl(apiService, applicantDao, ioDispatcher)
     }
 }

@@ -10,7 +10,7 @@ import com.linker.app.core.network_api.api.JobApiService
 import com.linker.app.core.network_api.NetworkResult
 import com.linker.app.core.data.models.HomeJobCard
 import com.linker.app.core.data.request.PostJobRequest
-import com.linker.app.core.data.responses.JobDto
+import com.linker.app.core.data.models.JobDto
 import com.linker.app.core.data.responses.UserResponse
 import com.linker.app.core.network_api.repository.JobRepository
 import kotlinx.coroutines.CoroutineDispatcher

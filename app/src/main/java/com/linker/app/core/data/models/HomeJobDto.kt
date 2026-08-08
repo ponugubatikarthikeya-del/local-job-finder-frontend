@@ -17,17 +17,17 @@ data class HomeJobCard(
     val distance: Double
 )
 
-data class CompleteJob(
-    val id: Long,
-    val userId: Long,
-    val username: String,
-    val title: String,
-    val description: String,
-    val category: String,
-    val payAmount: BigDecimal,
-    val jobType: JobTypeEnum,
-    val address: String,
-    val status: JobStatusEnum,
-    val jobTime: java.time.LocalDateTime,
-    val createdAt: java.time.LocalDateTime
-)
+//data class CompleteJob(
+//    val id: Long,
+//    val userId: Long,
+//    val username: String,
+//    val title: String,
+//    val description: String,
+//    val category: String,
+//    val payAmount: BigDecimal,
+//    val jobType: JobTypeEnum,
+//    val address: String,
+//    val status: JobStatusEnum,
+//    val jobTime: java.time.LocalDateTime,
+//    val createdAt: java.time.LocalDateTime
+//)

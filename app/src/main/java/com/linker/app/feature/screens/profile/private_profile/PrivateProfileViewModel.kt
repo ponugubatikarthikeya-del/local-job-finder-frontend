@@ -36,13 +36,16 @@ class PrivateProfileViewModel @Inject constructor(
 
     init {
         observeUserProfile()
-        fetchUserProfile()
     }
 
     private fun observeUserProfile() {
         profileRepository.getUserProfileFlow()
             .onEach { user ->
                 _state.update { it.copy(user = user) }
+                // Only fetch from API if we don't have user data locally
+                if (user == null && !_state.value.isLoading) {
+                    fetchUserProfile()
+                }
             }
             .launchIn(viewModelScope)
     }

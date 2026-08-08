@@ -1,5 +1,6 @@
 package com.linker.app.core.data.responses
 
+import com.linker.app.core.data.models.PublicProfileDto
 import kotlinx.serialization.Serializable
 import java.time.Instant
 import com.linker.app.core.util.serializers.InstantSerializer

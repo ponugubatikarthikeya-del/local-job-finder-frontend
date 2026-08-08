@@ -3,7 +3,7 @@ package com.linker.app.feature.screens.profile.public_profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.linker.app.core.data.models.User
-import com.linker.app.core.data.responses.PublicProfileDto
+import com.linker.app.core.data.models.PublicProfileDto
 import com.linker.app.core.network_api.NetworkResult
 import com.linker.app.core.network_api.repository.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
