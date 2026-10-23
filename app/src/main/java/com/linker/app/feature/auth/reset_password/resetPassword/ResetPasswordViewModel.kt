@@ -5,8 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.linker.app.core.data.request.PasswordRequest
 import com.linker.app.core.network_api.NetworkResult
-import com.linker.app.core.network_api.repository.AuthRepository
-import androidx.navigation.toRoute
+import com.linker.app.core.repository.AuthRepository
 import com.linker.app.core.datastore.TokenManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel

@@ -31,7 +31,7 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PublicJobDetailsUi(
-    state: PublicJobDetailsUistate,
+    state: PublicJobDetailsUiState,
     onEvent: (PublicJobDetailsEvent) -> Unit
 ) {
     val job = state.job
@@ -308,7 +308,7 @@ fun InfoChip(icon: ImageVector, text: String, modifier: Modifier = Modifier) {
 fun PublicJobDetailsPreview() {
     LocalJobFinderTheme {
         PublicJobDetailsUi(
-            state = PublicJobDetailsUistate(
+            state = PublicJobDetailsUiState(
                 job = JobEntity(
                     id = 1L,
                     userId = 101L,

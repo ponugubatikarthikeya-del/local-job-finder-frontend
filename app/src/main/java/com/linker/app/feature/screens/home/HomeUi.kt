@@ -1,5 +1,8 @@
 package com.linker.app.feature.screens.home
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -29,12 +32,19 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.linker.app.core.data.models.HomeJobCard
-import com.linker.app.core.util.enums.JobTypeEnum
+import com.linker.app.core.data.models.HomeJobDto
 import com.linker.app.core.util.enums.JobStatusEnum
 import com.linker.app.ui.theme.LocalJobFinderTheme
 import java.math.BigDecimal
 import java.util.*
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
+import com.linker.app.ui.components.AppendError
+import com.linker.app.ui.components.AppendLoading
+import com.linker.app.ui.components.EmptyListState
+import com.linker.app.ui.components.FullScreenError
+import com.linker.app.ui.components.FullScreenLoading
+
 
 // Data Models
 data class Category(val name: String, val icon: ImageVector)
@@ -45,6 +55,8 @@ fun HomeUi(
     state: HomeUiState,
     onEvent: (HomeEvent) -> Unit
 ) {
+    val jobs = state.jobsPagingDataFlow.collectAsLazyPagingItems()
+
     val categories = remember {
         listOf(
             Category("Plumbing", Icons.Default.Build),
@@ -61,6 +73,35 @@ fun HomeUi(
     }
 
     val focusManager = LocalFocusManager.current
+    var showLocationDialog by remember { mutableStateOf(false) }
+
+    if (showLocationDialog) {
+        AlertDialog(
+            onDismissRequest = { showLocationDialog = false },
+            title = { Text("Selected Location 📍") },
+            text = {
+                Text(
+                    text = "Current Address: ${state.address}\n\nWould you like to change your location to discover jobs in another city?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLocationDialog = false
+                        onEvent(HomeEvent.OnChangeLocationClicked)
+                    }
+                ) {
+                    Text("Change Address")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLocationDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp),
@@ -79,7 +120,10 @@ fun HomeUi(
                                 letterSpacing = 0.5.sp
                             )
                         )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { showLocationDialog = true }
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.LocationOn,
                                 contentDescription = null,
@@ -90,7 +134,8 @@ fun HomeUi(
                             Text(
                                 text = state.address,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
@@ -112,9 +157,10 @@ fun HomeUi(
             )
         }
     ) { paddingValues ->
+
         PullToRefreshBox(
-            isRefreshing = state.isLoading,
-            onRefresh = { onEvent(HomeEvent.OnRefresh) },
+            isRefreshing = jobs.loadState.refresh is LoadState.Loading && jobs.itemCount > 0,
+            onRefresh = { jobs.refresh() },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -162,62 +208,77 @@ fun HomeUi(
                 }
 
                 // Jobs List
-                if (state.isLoading && state.jobs.isEmpty()) {
+                // --- PAGING STATE HANDLING LOGIC ---
+                // We analyze the LoadState of both the 'refresh' (initial load/pull-down) 
+                // and 'append' (scrolling to bottom) events to decide what UI to render.
+                val refreshState = jobs.loadState.refresh
+                val appendState = jobs.loadState.append
+                
+                // 1. Initial Loading State
+                // Occurs when we are fetching the first page and have no cached data.
+                if (refreshState is LoadState.Loading && jobs.itemCount == 0) {
+                    item { FullScreenLoading() }
+                } 
+                // 2. Initial Error State
+                // Occurs when the first fetch fails and there's no cached data from Room.
+                else if (refreshState is LoadState.Error && jobs.itemCount == 0) {
                     item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 100.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
-                } else if (state.jobs.isEmpty()) {
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 48.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.WorkOff,
-                                contentDescription = null,
-                                modifier = Modifier.size(80.dp),
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "No jobs available nearby",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "Check back later or try a different location",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                } else {
-                    items(
-                        items = state.jobs,
-                        key = { it.id },
-                        contentType = { "JobCard" }
-                    ) { job ->
-                        JobCardItem(
-                            job = job,
-                            onEvent = onEvent
+                        FullScreenError(
+                            message = refreshState.error.localizedMessage ?: "Failed to load jobs",
+                            onRetry = { jobs.retry() }
                         )
+                    }
+                } 
+                // 3. Empty Success State
+                // Occurs when the data successfully fetched, but returned 0 results.
+                else if (jobs.itemCount == 0) {
+                    item {
+                        EmptyListState(
+                            title = "No jobs available nearby",
+                            description = "Check back later or try a different location",
+                            icon = Icons.Default.WorkOff
+                        )
+                    }
+                } 
+                // 4. Data Population & Append States
+                else {
+                    // Render the actual list of Job Cards
+                    items(
+                        count = jobs.itemCount,
+                        key = { jobs[it]?.id ?: it },
+                        contentType = { "JobCard" }
+                    ) { index ->
+                        val job = jobs[index]
+                        if (job != null) {
+                            JobCardItem(
+                                job = job,
+                                onEvent = onEvent
+                            )
+                        }
+                    }
+                    
+                    // 5. Append Loading State
+                    // Occurs when the user scrolls to the bottom and we request the next page.
+                    if (appendState is LoadState.Loading) {
+                        item { AppendLoading() }
+                    } 
+                    // 6. Append Error State
+                    // Occurs when the pagination request fails. Provides an inline retry button.
+                    else if (appendState is LoadState.Error) {
+                        item {
+                            AppendError(
+                                message = appendState.error.localizedMessage ?: "Failed to load more",
+                                onRetry = { jobs.retry() }
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -239,10 +300,8 @@ fun SearchBarSection(
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = { 
-            if (canSearch) {
-                onSearchClick()
-                focusManager.clearFocus()
-            }
+            onSearchClick()
+            focusManager.clearFocus()
         }),
         trailingIcon = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -303,27 +362,46 @@ fun CategoryItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val animatedBgColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary 
+                      else MaterialTheme.colorScheme.surface,
+        animationSpec = tween(durationMillis = 250),
+        label = "categoryBg"
+    )
+    val animatedIconColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary 
+                       else MaterialTheme.colorScheme.primary,
+        animationSpec = tween(durationMillis = 250),
+        label = "categoryIcon"
+    )
+    val animatedBorderColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary 
+                      else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+        animationSpec = tween(durationMillis = 250),
+        label = "categoryBorder"
+    )
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.width(85.dp)
     ) {
-        Box(
+        Surface(
             modifier = Modifier
                 .size(64.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    if (isSelected) MaterialTheme.colorScheme.primary 
-                    else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
-                )
                 .clickable { onClick() },
-            contentAlignment = Alignment.Center
+            shape = RoundedCornerShape(20.dp),
+            color = animatedBgColor,
+            border = BorderStroke(1.5.dp, animatedBorderColor),
+            shadowElevation = if (isSelected) 4.dp else 1.dp
         ) {
-            Icon(
-                imageVector = category.icon,
-                contentDescription = category.name,
-                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(30.dp)
-            )
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = category.icon,
+                    contentDescription = category.name,
+                    tint = animatedIconColor,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -338,18 +416,18 @@ fun CategoryItem(
 
 @Composable
 fun JobCardItem(
-    job: HomeJobCard,
+    job: HomeJobDto,
     onEvent: (HomeEvent) -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .clickable { onEvent(HomeEvent.OnJobClicked(job)) },
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = CardDefaults.outlinedCardBorder(enabled = true)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f))
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
             Row(
@@ -402,7 +480,7 @@ fun JobCardItem(
             
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { onEvent(HomeEvent.OnProfileClicked(job.id)) }
+                modifier = Modifier.clickable { onEvent(HomeEvent.OnProfileClicked(job)) }
             ) {
                 Surface(
                     modifier = Modifier.size(20.dp),
@@ -511,20 +589,6 @@ fun ShowHomeUiPreview() {
     LocalJobFinderTheme {
         HomeUi(
             state = HomeUiState(
-                jobs = listOf(
-                    HomeJobCard(
-                        id = 1L,
-                        userId = 101L,
-                        username = "johndoe",
-                        title = "Fix Kitchen Sink",
-                        category = "Plumbing",
-                        payAmount = BigDecimal("50.00"),
-                        jobType = JobTypeEnum.FIXED,
-                        address = "123 Main St, Springfield",
-                        status = JobStatusEnum.OPEN,
-                        distance = 2.5
-                    )
-                ),
                 address = "Springfield, IL"
             ),
             onEvent = {}

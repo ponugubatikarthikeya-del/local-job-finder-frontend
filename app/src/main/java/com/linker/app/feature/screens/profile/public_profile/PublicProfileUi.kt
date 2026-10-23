@@ -26,7 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.linker.app.core.data.models.User
+import com.linker.app.core.data.models.UserDto
 import com.linker.app.ui.theme.LocalJobFinderTheme
 import java.math.BigDecimal
 
@@ -39,26 +39,19 @@ fun PublicProfileUi(
     val user = state.user
 
     Scaffold(
-//        topBar = {
-//            TopAppBar(
-//                title = { Text("User Profile", fontWeight = FontWeight.Bold) },
-//                navigationIcon = {
-//                    IconButton(onClick = { onEvent(PublicProfileEvent.OnBackClicked) }) {
-//                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-//                    }
-//                },
-//                actions = {
-//                    IconButton(onClick = { }) {
-//                        Icon(Icons.Default.MoreVert, contentDescription = "More")
-//                    }
-//                },
-//                colors = TopAppBarDefaults.topAppBarColors(
-//                    containerColor = MaterialTheme.colorScheme.background,
-//                    titleContentColor = MaterialTheme.colorScheme.onBackground
-//                )
-//            )
-//        }
-
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("User Profile", style = MaterialTheme.typography.titleLarge) },
+                navigationIcon = {
+                    IconButton(onClick = { onEvent(PublicProfileEvent.OnBackClicked) }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
+        }
     ) { padding ->
         Box(
             modifier = Modifier
@@ -80,7 +73,7 @@ fun PublicProfileUi(
 }
 
 @Composable
-fun PublicProfileContent(user: User) {
+fun PublicProfileContent(user: UserDto) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp)
@@ -108,7 +101,7 @@ fun PublicProfileContent(user: User) {
 }
 
 @Composable
-fun ProfileHeaderSection(user: User) {
+fun ProfileHeaderSection(user: UserDto) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -184,7 +177,7 @@ fun ProfileHeaderSection(user: User) {
 }
 
 @Composable
-fun StatsSection(user: User) {
+fun StatsSection(user: UserDto) {
     // Stats below the profile icon and header
     Card(
         modifier = Modifier
@@ -248,7 +241,7 @@ fun StatItem(value: String, label: String, icon: ImageVector, iconColor: Color) 
 }
 
 @Composable
-fun AboutSection(user: User) {
+fun AboutSection(user: UserDto) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -272,8 +265,8 @@ fun AboutSection(user: User) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SkillsSection(user: User) {
-    if (user.skills.isNotEmpty()) {
+fun SkillsSection(user: UserDto) {
+    if (!user.skills.isNullOrEmpty()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -291,7 +284,7 @@ fun SkillsSection(user: User) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                user.skills.forEach { skill ->
+                user.skills?.forEach { skill ->
                     SuggestionChip(
                         onClick = { },
                         label = { Text(skill) },
@@ -377,7 +370,7 @@ fun EmptyView() {
 @Preview(showBackground = true)
 @Composable
 fun PublicProfilePreview() {
-    val dummyUser = User(
+    val dummyUser = UserDto(
         id = 1L,
         username = "Karthikeya",
         headline = "Senior Android Developer",

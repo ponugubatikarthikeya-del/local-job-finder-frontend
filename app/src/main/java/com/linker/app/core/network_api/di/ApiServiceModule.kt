@@ -2,9 +2,7 @@ package com.linker.app.core.network_api.di
 
 import com.linker.app.core.network_api.api.ApplicationsApiService
 import com.linker.app.core.network_api.api.AuthApiService
-import com.linker.app.core.network_api.api.FcmApiService
 import com.linker.app.core.network_api.api.JobApiService
-import com.linker.app.core.network_api.api.JobFilterApiService
 import com.linker.app.core.network_api.api.ProfileApiService
 import com.linker.app.core.network_api.api.ReviewApiService
 import dagger.Module
@@ -34,21 +32,10 @@ object ApiServiceModule {
 
     @Provides
     @Singleton
-    fun provideFcmApiService(retrofit: Retrofit): FcmApiService {
-        return retrofit.create(FcmApiService::class.java)
-    }
-
-    @Provides
-    @Singleton
     fun provideJobApiService(retrofit: Retrofit): JobApiService {
         return retrofit.create(JobApiService::class.java)
     }
 
-    @Provides
-    @Singleton
-    fun provideJobFilterApiService(retrofit: Retrofit): JobFilterApiService {
-        return retrofit.create(JobFilterApiService::class.java)
-    }
 
     @Provides
     @Singleton

@@ -3,14 +3,12 @@ package com.linker.app.feature.auth.OtpVerification
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.linker.app.SignupOtpVerificationScreen
 import com.linker.app.core.datastore.TokenManager
 import com.linker.app.core.network_api.NetworkResult
 import com.linker.app.core.data.request.EmailCheckupRequest
 import com.linker.app.core.data.request.ResetPasswordOtpValidateRequest
 import com.linker.app.core.data.request.SignupOtpValidationRequest
-import com.linker.app.core.network_api.repository.AuthRepository
-import androidx.navigation.toRoute
+import com.linker.app.core.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -41,7 +39,6 @@ class OtpViewModel @Inject constructor(
 
     init {
         // Safely pull the email value directly out of the SavedStateHandle.
-        // This avoids the "Cannot cast Boolean to ArrayList" crash in Navigation 2.8.0.
         val emailArg: String? = savedStateHandle["email"]
         emailArg?.let { email ->
             _state.update { it.copy(email = email) }
@@ -68,18 +65,8 @@ class OtpViewModel @Inject constructor(
         }
     }
 
-//    private fun startTimer() {
-//        viewModelScope.launch {
-//            _state.update { it.copy(timerTicks = 300) }
-//            while (_state.value.timerTicks > 0) {
-//                delay(1000.milliseconds)
-//                _state.update { it.copy(timerTicks = it.timerTicks - 1) }
-//            }
-//        }
-//    }
-
     private fun startTimer() {
-        timerJob?.cancel() // Cancel the active timer loop before launching a new one
+        timerJob?.cancel()
         timerJob = viewModelScope.launch {
             _state.update { it.copy(timerTicks = 300) }
             while (_state.value.timerTicks > 0) {
@@ -98,11 +85,11 @@ class OtpViewModel @Inject constructor(
                     is NetworkResult.Success -> {
                         _state.update { it.copy(isLoading = false) }
                         startTimer()
-                        _effect.send(OtpEffect.ShowError("Code resent successfully")) // Reuse error effect for simple toast
+                        sendEffect(OtpEffect.ShowError("Code resent successfully"))
                     }
                     is NetworkResult.Failure -> {
                         _state.update { it.copy(isLoading = false) }
-                        _effect.send(OtpEffect.ShowError(result.exception.message ?: "Failed to resend code"))
+                        sendEffect(OtpEffect.ShowError(result.exception.message ?: "Failed to resend code"))
                     }
                     is NetworkResult.Loading -> {}
                 }
@@ -113,13 +100,10 @@ class OtpViewModel @Inject constructor(
     private fun verifyOtp() {
         val currentState = _state.value
         if (currentState.otp.length < 6) {
-            viewModelScope.launch {
-                _effect.send(OtpEffect.ShowError("Please enter complete OTP"))
-            }
+            sendEffect(OtpEffect.ShowError("Please enter complete OTP"))
             return
         }
 
-        // FIXED: True calls reset, false calls signup
         if (isResetFlow) {
             performResetOtpVerification()
         } else {
@@ -127,47 +111,37 @@ class OtpViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Logic for Signup OTP Verification.
-     * This method is also used during Login recovery when an account is unverified.
-     */
-
     private fun performSignupOtpVerification() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
             
-            delay(3000.milliseconds)
-            
-            // Re-fetch latest OTP from state after delay
             val currentOtp = _state.value.otp
             if (currentOtp.length != 6) {
                 _state.update { it.copy(isLoading = false) }
-                _effect.send(OtpEffect.ShowError("Invalid OTP length"))
+                sendEffect(OtpEffect.ShowError("Invalid OTP length"))
                 return@launch
             }
 
             val request = SignupOtpValidationRequest(
-                email= _state.value.email,
+                email = _state.value.email,
                 otp = currentOtp
             )
 
-            // Specifically calls the Signup OTP Verification API as per requirements
             when (val result = repository.verifyOtp(request)) {
-                // Inside performSignupOtpVerification()
                 is NetworkResult.Success -> {
-                    tokenManager.saveTokens(
-                        accessToken = result.data.accessToken,
-                        refreshToken = result.data.refreshToken
-                    )
+                    val dataMap = result.data.data
+                    val accessToken = dataMap?.get("jwtAccessToken") ?: dataMap?.get("accessToken") ?: ""
+                    val refreshToken = dataMap?.get("jwtRefreshToken") ?: dataMap?.get("refreshToken") ?: ""
+                    tokenManager.saveTokens(accessToken, refreshToken)
                     _state.update { it.copy(isLoading = false) }
-                    // FIXED: Forward the code parameter instead of sending a null default
-                    _effect.send(OtpEffect.VerificationSuccess(currentOtp))
+                    sendEffect(OtpEffect.VerificationSuccess(currentOtp))
                 }
 
                 is NetworkResult.Failure -> {
                     _state.update { it.copy(isLoading = false, errorMessage = result.exception.message) }
-                    _effect.send(OtpEffect.ShowError(result.exception.message ?: "Verification failed"))
+                    sendEffect(OtpEffect.ShowError(result.exception.message ?: "Verification failed"))
                 }
+
                 is NetworkResult.Loading -> {
                     _state.update { it.copy(isLoading = true) }
                 }
@@ -179,18 +153,15 @@ class OtpViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
 
-            delay(3000.milliseconds)
-            
-            // Re-fetch latest OTP from state after delay
             val currentOtp = _state.value.otp
             if (currentOtp.length != 6) {
                 _state.update { it.copy(isLoading = false) }
-                _effect.send(OtpEffect.ShowError("Invalid OTP length"))
+                sendEffect(OtpEffect.ShowError("Invalid OTP length"))
                 return@launch
             }
 
             val request = ResetPasswordOtpValidateRequest(
-                email= _state.value.email,
+                email = _state.value.email,
                 otp = currentOtp.toIntOrNull()
             )
 
@@ -198,16 +169,22 @@ class OtpViewModel @Inject constructor(
                 is NetworkResult.Success -> {
                     _state.update { it.copy(isLoading = false) }
                     tokenManager.saveResetKey(result.data.resetKey)
-                    _effect.send(OtpEffect.VerificationSuccess(currentOtp))
+                    sendEffect(OtpEffect.VerificationSuccess(currentOtp))
                 }
                 is NetworkResult.Failure -> {
                     _state.update { it.copy(isLoading = false, errorMessage = result.exception.message) }
-                    _effect.send(OtpEffect.ShowError(result.exception.message ?: "Verification failed"))
+                    sendEffect(OtpEffect.ShowError(result.exception.message ?: "Verification failed"))
                 }
                 is NetworkResult.Loading -> {
                     _state.update { it.copy(isLoading = true) }
                 }
             }
+        }
+    }
+
+    private fun sendEffect(effect: OtpEffect) {
+        viewModelScope.launch {
+            _effect.send(effect)
         }
     }
 }

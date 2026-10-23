@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.linker.app.core.data.request.PostJobRequest
 import com.linker.app.core.datastore.TokenManager
 import com.linker.app.core.network_api.NetworkResult
-import com.linker.app.core.network_api.repository.JobRepository
+import com.linker.app.core.repository.JobRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,7 +63,7 @@ class PostJobViewModel @Inject constructor(
 
     private fun postJob() {
         val s = _state.value
-        
+
         if (s.title.isBlank() || s.description.isBlank() || s.category.isBlank() || s.payAmount.isBlank()) {
             viewModelScope.launch { _effect.send(PostJobEffect.ShowSuccessToast("Please fill all required fields")) }
             return

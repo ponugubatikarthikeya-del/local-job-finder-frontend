@@ -1,7 +1,9 @@
 package com.linker.app.core.network_api.api
 
+import com.linker.app.core.data.models.ApplicantDto
+import com.linker.app.core.data.responses.JobPagingResponse
 import com.linker.app.core.data.responses.JobResponse
-import com.linker.app.core.data.responses.ViewApplicantsResponse
+import com.linker.app.core.data.responses.PagedResponse
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -18,7 +20,7 @@ interface ApplicationsApiService {
         @Path("jobId") jobId: Long,
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 20
-    ): ViewApplicantsResponse
+    ): JobPagingResponse<PagedResponse<ApplicantDto>>
 
     @POST("user/job/applications/acceptApplicant/{jobId}/{applicantId}")
     suspend fun acceptApplicant(

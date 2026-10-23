@@ -3,8 +3,7 @@ package com.linker.app.feature.auth.loading
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.linker.app.core.datastore.TokenManager
-import com.linker.app.core.network_api.repository.JobRepository
-import com.linker.app.fcm.FcmTokenManager
+import com.linker.app.core.repository.JobRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -20,9 +19,8 @@ import javax.inject.Inject
 @HiltViewModel
 class LoadingViewModel @Inject constructor(
     private val tokenManager: TokenManager,
-    private val jobRepository: JobRepository,
-    private val fcmTokenManager: FcmTokenManager
-) : ViewModel (){
+    private val jobRepository: JobRepository
+) : ViewModel () {
 
     private val _state = MutableStateFlow(LoadingUiState())
     val state : StateFlow<LoadingUiState> = _state.asStateFlow()
@@ -53,24 +51,8 @@ class LoadingViewModel @Inject constructor(
         _state.update { it.copy(isLoading = true, quote = randomQuote) }
 
         viewModelScope.launch {
-            // 1. Sync FCM token with backend immediately upon entering loading state
-            launch {
-                fcmTokenManager.syncCurrentToken()
-            }
-
-            // 2. Read fresh location flags from DataStore
+            // Read fresh location flags from DataStore
             val hasAddress = tokenManager.hasEnteredAddress.first()
-
-            // Start fetching jobs in parallel if address exists
-            if (hasAddress) {
-                launch {
-                    val lat = tokenManager.latitude.first()?.toDoubleOrNull()
-                    val lng = tokenManager.longitude.first()?.toDoubleOrNull()
-                    if (lat != null && lng != null) {
-                        jobRepository.getActiveJobsNearby(lat, lng)
-                    }
-                }
-            }
 
             // Minimum 3 seconds loading screen presentation
             delay(3000)

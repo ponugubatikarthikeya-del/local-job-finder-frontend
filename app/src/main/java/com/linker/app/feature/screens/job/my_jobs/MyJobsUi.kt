@@ -1,10 +1,10 @@
 package com.linker.app.feature.screens.job.my_jobs
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,11 +21,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.linker.app.core.data.models.HomeJobCard
+import com.linker.app.core.data.models.HomeJobDto
 import com.linker.app.core.util.enums.JobStatusEnum
 import com.linker.app.core.util.enums.JobTypeEnum
 import com.linker.app.ui.theme.LocalJobFinderTheme
 import java.math.BigDecimal
+
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
+import com.linker.app.ui.components.AppendError
+import com.linker.app.ui.components.AppendLoading
+import com.linker.app.ui.components.EmptyListState
+import com.linker.app.ui.components.FullScreenError
+import com.linker.app.ui.components.FullScreenLoading
+import androidx.compose.ui.text.style.TextAlign
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +42,7 @@ fun MyJobsUi(
     state: MyJobsUiState,
     onEvent: (MyJobsEvent) -> Unit
 ) {
+    val jobs = state.jobsPagingDataFlow.collectAsLazyPagingItems()
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -49,30 +59,41 @@ fun MyJobsUi(
         }
     ) { paddingValues ->
         PullToRefreshBox(
-            isRefreshing = state.isLoading,
-            onRefresh = { onEvent(MyJobsEvent.OnRefresh) },
+            isRefreshing = jobs.loadState.refresh is LoadState.Loading && jobs.itemCount > 0,
+            onRefresh = { jobs.refresh() },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (state.jobs.isEmpty() && !state.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.WorkHistory,
-                            contentDescription = null,
-                            modifier = Modifier.size(80.dp),
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "You haven't posted any jobs yet.",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            } else {
+            // --- PAGING STATE HANDLING LOGIC ---
+            val refreshState = jobs.loadState.refresh
+            val appendState = jobs.loadState.append
+            
+            // 1. Initial Error State
+            // Occurs when the first fetch fails and there's no cached data from Room.
+            if (refreshState is LoadState.Error && jobs.itemCount == 0) {
+                FullScreenError(
+                    message = refreshState.error.localizedMessage ?: "Failed to load jobs",
+                    onRetry = { jobs.retry() }
+                )
+            } 
+            // 2. Initial Loading State
+            // Center loader for initial cold start when database is empty.
+            else if (refreshState is LoadState.Loading && jobs.itemCount == 0) {
+                FullScreenLoading(modifier = Modifier.align(Alignment.Center))
+            }
+            // 3. Empty Success State
+            // Occurs when the data successfully fetched, but returned 0 results.
+            else if (jobs.itemCount == 0 && refreshState !is LoadState.Loading) {
+                EmptyListState(
+                    title = "You haven't posted any jobs yet.",
+                    description = "Post a job to see it listed here.",
+                    icon = Icons.Default.WorkHistory,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            } 
+            // 4. Data Population & Append States
+            else {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -81,10 +102,29 @@ fun MyJobsUi(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(
-                        items = state.jobs,
-                        key = { it.id }
-                    ) { job ->
-                        MyJobCardItem(job = job, onClick = { onEvent(MyJobsEvent.OnJobClicked(job)) })
+                        count = jobs.itemCount,
+                        key = { jobs[it]?.id ?: it }
+                    ) { index ->
+                        val job = jobs[index]
+                        if (job != null) {
+                            MyJobCardItem(job = job, onClick = { onEvent(MyJobsEvent.OnJobClicked(job)) })
+                        }
+                    }
+                    
+                    // 5. Append Loading State
+                    // Occurs when the user scrolls to the bottom and we request the next page.
+                    if (appendState is LoadState.Loading) {
+                        item { AppendLoading() }
+                    } 
+                    // 6. Append Error State
+                    // Occurs when the pagination request fails. Provides an inline retry button.
+                    else if (appendState is LoadState.Error) {
+                        item {
+                            AppendError(
+                                message = appendState.error.localizedMessage ?: "Failed to load more",
+                                onRetry = { jobs.retry() }
+                            )
+                        }
                     }
                 }
             }
@@ -94,18 +134,18 @@ fun MyJobsUi(
 
 @Composable
 fun MyJobCardItem(
-    job: HomeJobCard,
+    job: HomeJobDto,
     onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .clickable { onClick() },
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = CardDefaults.outlinedCardBorder(enabled = true)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f))
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
             Row(
@@ -203,22 +243,7 @@ fun MyJobCardItem(
 fun MyJobsPreview() {
     LocalJobFinderTheme {
         MyJobsUi(
-            state = MyJobsUiState(
-                jobs = listOf(
-                    HomeJobCard(
-                        id = 1L,
-                        userId = 101L,
-                        username = "johndoe",
-                        title = "Fix Kitchen Sink",
-                        category = "Plumbing",
-                        payAmount = BigDecimal("50.00"),
-                        jobType = JobTypeEnum.FIXED,
-                        address = "123 Main St, Springfield",
-                        status = JobStatusEnum.OPEN,
-                        distance = 0.0
-                    )
-                )
-            ),
+            state = MyJobsUiState(),
             onEvent = {}
         )
     }

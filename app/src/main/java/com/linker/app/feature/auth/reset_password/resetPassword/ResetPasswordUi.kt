@@ -14,14 +14,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.linker.app.core.util.components.AppTextField
 import com.linker.app.ui.theme.LocalJobFinderTheme
 
@@ -43,11 +41,11 @@ fun ResetPasswordUi(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(20.dp)
+                    .padding(24.dp)
                     .verticalScroll(rememberScrollState())
             ) {
 
-                Spacer(Modifier.height(30.dp))
+                Spacer(Modifier.height(24.dp))
 
                 IconButton(
                     onClick = onBack,
@@ -55,33 +53,33 @@ fun ResetPasswordUi(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
-                        contentDescription = "navigate back",
-                        tint = Color.Unspecified
+                        contentDescription = "Navigate back",
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
 
-                Spacer(Modifier.height(30.dp))
+                Spacer(Modifier.height(24.dp))
 
                 Text(
-                    text = "Create New\nPassword",
+                    text = "Create New Password 🔑",
                     style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold
+                    color = MaterialTheme.colorScheme.onBackground
                 )
 
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(12.dp))
 
                 Text(
-                    text = "Create a new password\nfor your account",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.Gray
+                    text = "Your new password must be different from previous passwords.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(Modifier.height(30.dp))
+                Spacer(Modifier.height(32.dp))
 
                 AppTextField(
                     value = state.password,
                     onValueChange = { onEvent(ResetPasswordEvent.OnPasswordChanged(it)) },
-                    label = "Enter new password",
+                    label = "New Password",
                     leadingIcon = Icons.Outlined.Lock,
                     visualTransformation = if (state.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
@@ -89,25 +87,25 @@ fun ResetPasswordUi(
                             Icon(
                                 imageVector = if (state.isPasswordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                                 contentDescription = "Toggle visibility",
-                                tint = Color.Gray
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                 )
 
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(16.dp))
 
                 AppTextField(
                     value = state.confirmPassword,
                     onValueChange = { onEvent(ResetPasswordEvent.OnConfirmPasswordChanged(it)) },
-                    label = "Enter confirm password",
+                    label = "Confirm Password",
                     leadingIcon = Icons.Outlined.Lock,
                     visualTransformation = if (state.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                 )
 
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(32.dp))
 
                 Button(
                     onClick = { onEvent(ResetPasswordEvent.OnResetClicked) },
@@ -116,18 +114,21 @@ fun ResetPasswordUi(
                         .height(56.dp),
                     shape = MaterialTheme.shapes.large,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Blue,
-                        contentColor = Color.White
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     enabled = !state.isLoading
                 ) {
                     if (state.isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.5.dp
+                        )
                     } else {
                         Text(
-                            text = "Continue",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                            text = "Reset Password",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
                     }
                 }

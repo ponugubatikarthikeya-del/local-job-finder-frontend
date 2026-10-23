@@ -1,6 +1,6 @@
 package com.linker.app.core.network_api.api
 
-import com.linker.app.core.data.responses.RefreshTokenResponse
+import com.linker.app.core.data.responses.LoginResponse
 import retrofit2.Call
 import retrofit2.http.Header
 import retrofit2.http.POST
@@ -13,5 +13,5 @@ interface TokenRefreshService {
     @POST("user/auth/refresh/token")
     fun refreshTokens(
         @Header("Authorization") refreshToken: String,
-    ): Call<RefreshTokenResponse>
+    ): Call<LoginResponse<Map<String, String>>>
 }

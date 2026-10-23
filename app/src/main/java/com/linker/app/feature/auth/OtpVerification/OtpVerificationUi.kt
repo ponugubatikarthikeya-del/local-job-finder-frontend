@@ -12,13 +12,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.linker.app.ui.theme.LocalJobFinderTheme
 
 @Composable
@@ -35,7 +32,7 @@ fun OtpVerificationUi(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
-                .padding(20.dp),
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
@@ -45,45 +42,39 @@ fun OtpVerificationUi(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
-                    contentDescription = "navigate back",
-                    tint = Color.Unspecified
+                    contentDescription = "Navigate Back",
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
-            Spacer(Modifier.height(30.dp))
+            
+            Spacer(Modifier.height(24.dp))
 
             Text(
                 text = "OTP Authentication",
                 style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
             )
 
-            Spacer(Modifier.height(5.dp))
+            Spacer(Modifier.height(8.dp))
 
             Text(
-                text = "Account Verification",
-                style = MaterialTheme.typography.titleSmall,
-                fontStyle = FontStyle.Italic,
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            Text(
-                text = "An authentication code has been sent to your email",
-                color = Color.Gray,
-                style = MaterialTheme.typography.titleMedium
+                text = "An authentication code has been sent to your email address:",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium
             )
 
             Spacer(Modifier.height(8.dp))
 
             Text(
                 text = state.email,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
             )
 
             Spacer(Modifier.height(40.dp))
 
-            // Production-ready OTP Input using BasicTextField
+            // OTP Input using BasicTextField
             BasicTextField(
                 value = state.otp,
                 onValueChange = { onEvent(OtpEvent.OnOtpChanged(it)) },
@@ -100,10 +91,14 @@ fun OtpVerificationUi(
 
                             Box(
                                 modifier = Modifier
-                                    .size(width = 52.dp, height = 60.dp)
+                                    .size(width = 48.dp, height = 56.dp)
                                     .border(
                                         width = if (isFocused) 2.dp else 1.dp,
-                                        color = if (isFocused) MaterialTheme.colorScheme.primary else Color.LightGray,
+                                        color = if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                        shape = MaterialTheme.shapes.medium
+                                    )
+                                    .background(
+                                        color = MaterialTheme.colorScheme.surface,
                                         shape = MaterialTheme.shapes.medium
                                     ),
                                 contentAlignment = Alignment.Center
@@ -112,7 +107,7 @@ fun OtpVerificationUi(
                                     text = char,
                                     style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onBackground
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -128,8 +123,8 @@ fun OtpVerificationUi(
             ) {
                 Text(
                     text = "Didn't receive code? ",
-                    color = Color.Gray,
-                    fontSize = 14.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
                 )
                 if (state.timerTicks > 0) {
                     val minutes = state.timerTicks / 60
@@ -138,15 +133,13 @@ fun OtpVerificationUi(
                     Text(
                         text = "Resend in $minutes:${seconds.toString().padStart(2, '0')}",
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 } else {
                     Text(
                         text = "Resend OTP",
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                         modifier = Modifier.clickable { onEvent(OtpEvent.OnResendClicked) }
                     )
                 }
@@ -159,24 +152,28 @@ fun OtpVerificationUi(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                shape = MaterialTheme.shapes.medium,
+                shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2563EB) // Professional Blue
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 enabled = state.otp.length == 6 && !state.isLoading
             ) {
                 if (state.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.5.dp
+                    )
                 } else {
                     Text(
-                        text = "Verify",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "Verify & Proceed",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 }
             }
             
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
         }
     }
 }

@@ -1,16 +1,17 @@
 package com.linker.app.core.repository_impl
 
-import com.linker.app.core.data.models.User
 import com.linker.app.core.data.models.UserDto
+import com.linker.app.core.data.models.PublicProfileDto
 import com.linker.app.core.data.request.AddressTakeRequest
 import com.linker.app.core.data.request.EditProfileRequest
 import com.linker.app.core.data.responses.ProfileResponse
+import com.linker.app.core.data.responses.UserProfileResponse
 import com.linker.app.core.database.dao.UserDao
 import com.linker.app.core.database.entity.UserEntity
 import com.linker.app.core.network_api.AppException
 import com.linker.app.core.network_api.NetworkResult
 import com.linker.app.core.network_api.api.ProfileApiService
-import com.linker.app.core.network_api.repository.ProfileRepository
+import com.linker.app.core.repository.ProfileRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -54,7 +55,7 @@ class ProfileRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getPublicProfile(jobId: Long): NetworkResult<com.linker.app.core.data.responses.PublicProfileResponse> = withContext(ioDispatcher) {
+    override suspend fun getPublicProfile(jobId: Long): NetworkResult<UserProfileResponse<PublicProfileDto>> = withContext(ioDispatcher) {
         try {
             val response = apiService.getPublicProfile(jobId)
             NetworkResult.Success(response)
@@ -83,7 +84,7 @@ class ProfileRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getUserProfileFlow(): Flow<User?> {
+    override fun getUserProfileFlow(): Flow<UserDto?> {
         return userDao.getUserFlow().map { it?.toUser() }
     }
 
@@ -106,7 +107,7 @@ class ProfileRepositoryImpl @Inject constructor(
         createdAt = createdAt
     )
 
-    private fun UserEntity.toUser() = User(
+    private fun UserEntity.toUser() = UserDto(
         id = id,
         username = username,
         email = email,

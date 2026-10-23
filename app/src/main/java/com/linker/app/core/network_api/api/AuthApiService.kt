@@ -9,10 +9,8 @@ import com.linker.app.core.data.request.SignupOtpValidationRequest
 import com.linker.app.core.data.request.SignupRequest
 import com.linker.app.core.data.responses.AuthResponse
 import com.linker.app.core.data.responses.LoginResponse
-import com.linker.app.core.data.responses.RefreshTokenResponse
 import com.linker.app.core.data.responses.ResetKeyOtpResponse
 import retrofit2.http.Body
-import retrofit2.http.GET
 import retrofit2.http.HTTP
 import retrofit2.http.Header
 import retrofit2.http.PATCH
@@ -25,13 +23,16 @@ interface AuthApiService {
     suspend fun signup(@Body request: SignupRequest): AuthResponse
 
     @POST("user/auth/signupOtp-verification")
-    suspend fun verifyOtp(@Body request: SignupOtpValidationRequest): LoginResponse
+    suspend fun verifyOtp(@Body request: SignupOtpValidationRequest): LoginResponse<Map<String,String>>
+
+    @POST("user/auth/resend-otp")
+    suspend fun resendOtp(@Body request: EmailCheckupRequest): AuthResponse
 
     @POST("user/auth/login")
-    suspend fun login(@Body request: LoginRequest): LoginResponse
+    suspend fun login(@Body request: LoginRequest): LoginResponse<Map<String,String>>
 
     @POST("user/auth/refresh/token")
-    suspend fun refreshTokens(@Header("Authorization") refreshToken: String): RefreshTokenResponse
+    suspend fun refreshTokens(@Header("Authorization") refreshToken: String):  LoginResponse<Map<String,String>>
 
     @PATCH("user/auth/forgot-password")
     suspend fun forgotPassword(@Body request: EmailCheckupRequest): AuthResponse
@@ -41,9 +42,6 @@ interface AuthApiService {
 
     @PATCH("user/auth/change-password")
     suspend fun changePassword(@Body request: PasswordRequest): AuthResponse
-
-    @POST("user/auth/resend-otp")
-    suspend fun resendOtp(@Body request: EmailCheckupRequest): AuthResponse
 
     @HTTP(method = "DELETE", path = "user/auth/logout", hasBody = true)
     suspend fun logout(

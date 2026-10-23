@@ -2,7 +2,7 @@ package com.linker.app.feature.screens.job.public_job_details
 
 import com.linker.app.core.database.entity.JobEntity
 
-data class PublicJobDetailsUistate(
+data class PublicJobDetailsUiState(
     val job: JobEntity? = null,
     val showApplyButton: Boolean = true,
     val showDeleteButton: Boolean = false,

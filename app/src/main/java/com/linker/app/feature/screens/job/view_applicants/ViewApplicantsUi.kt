@@ -3,25 +3,34 @@ package com.linker.app.feature.screens.job.view_applicants
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.linker.app.core.data.models.ApplicantDto
+import com.linker.app.ui.components.AppendError
+import com.linker.app.ui.components.AppendLoading
+import com.linker.app.ui.components.EmptyListState
+import com.linker.app.ui.components.FullScreenError
+import com.linker.app.ui.components.FullScreenLoading
 import com.linker.app.ui.theme.LocalJobFinderTheme
-import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -31,20 +40,12 @@ fun ViewApplicantsUi(
     state: ViewApplicantsUiState,
     onEvent: (ViewApplicantsEvent) -> Unit
 ) {
+    val applicants = state.applicantsPagingDataFlow.collectAsLazyPagingItems()
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text("Applicants", fontWeight = FontWeight.Bold)
-                        if (state.totalElements > 0) {
-                            Text(
-                                text = "${state.totalElements} people applied",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
+                    Text("Applicants", fontWeight = FontWeight.Bold)
                 },
                 navigationIcon = {
                     IconButton(onClick = { onEvent(ViewApplicantsEvent.OnBackClicked) }) {
@@ -64,34 +65,56 @@ fun ViewApplicantsUi(
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            if (state.isLoading && state.applicants.isEmpty()) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else if (!state.isLoading && state.applicants.isEmpty()) {
-                EmptyApplicantsView()
+            val refreshState = applicants.loadState.refresh
+            val appendState = applicants.loadState.append
+
+            if (refreshState is LoadState.Error && applicants.itemCount == 0) {
+                FullScreenError(
+                    message = refreshState.error.localizedMessage ?: "Failed to load applicants",
+                    onRetry = { applicants.retry() }
+                )
+            } else if (refreshState is LoadState.Loading && applicants.itemCount == 0) {
+                FullScreenLoading(modifier = Modifier.align(Alignment.Center))
+            } else if (applicants.itemCount == 0) {
+                EmptyListState(
+                    title = "No applicants yet",
+                    description = "When someone applies, they will appear here.",
+                    icon = Icons.Default.Group,
+                    modifier = Modifier.align(Alignment.Center)
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(state.applicants) { applicant ->
-                        ApplicantCard(
-                            applicant = applicant,
-                            onAccept = { 
-                                onEvent(ViewApplicantsEvent.AcceptApplicant(applicant.displayApplicantId))
-                            },
-                            onReject = { 
-                                onEvent(ViewApplicantsEvent.RejectApplicant(applicant.displayApplicantId))
-                            },
-                            isProcessing = state.isLoading
-                        )
+                    items(
+                        count = applicants.itemCount,
+                        key = { applicants[it]?.uniqueRoomKey ?: it }
+                    ) { index ->
+                        val applicant = applicants[index]
+                        if (applicant != null) {
+                            ApplicantCard(
+                                applicant = applicant,
+                                onAccept = {
+                                    onEvent(ViewApplicantsEvent.AcceptApplicant(applicant.targetApplicantId))
+                                },
+                                onReject = {
+                                    onEvent(ViewApplicantsEvent.RejectApplicant(applicant.targetApplicantId))
+                                },
+                                isProcessing = state.isLoading
+                            )
+                        }
                     }
-                    
-                    if (state.isLoading && state.applicants.isNotEmpty()) {
+
+                    if (appendState is LoadState.Loading) {
+                        item { AppendLoading() }
+                    } else if (appendState is LoadState.Error) {
                         item {
-                            Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                            }
+                            AppendError(
+                                message = appendState.error.localizedMessage ?: "Failed to load more",
+                                onRetry = { applicants.retry() }
+                            )
                         }
                     }
                 }
@@ -103,38 +126,13 @@ fun ViewApplicantsUi(
 }
 
 @Composable
-fun EmptyApplicantsView() {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.Person,
-            contentDescription = null,
-            modifier = Modifier.size(80.dp).alpha(0.1f),
-            tint = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "No applicants yet",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = "When people apply, they will show up here",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-        )
-    }
-}
-
-@Composable
 fun NotificationOverlays(state: ViewApplicantsUiState, onEvent: (ViewApplicantsEvent) -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
         if (state.error != null) {
             Snackbar(
-                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp),
                 action = {
                     TextButton(onClick = { onEvent(ViewApplicantsEvent.ClearError) }) {
                         Text("Dismiss", color = Color.White)
@@ -148,7 +146,9 @@ fun NotificationOverlays(state: ViewApplicantsUiState, onEvent: (ViewApplicantsE
 
         if (state.successMessage != null) {
             Snackbar(
-                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp),
                 action = {
                     TextButton(onClick = { onEvent(ViewApplicantsEvent.ClearSuccessMessage) }) {
                         Text("OK", color = Color.White)
@@ -172,7 +172,7 @@ fun ApplicantCard(
     val status = applicant.status?.uppercase() ?: "PENDING"
     val formatter = try {
         DateTimeFormatter.ofPattern("dd MMM, yyyy").withZone(ZoneId.systemDefault())
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         null
     }
     val dateString = applicant.appliedAt?.let { formatter?.format(it) } ?: "Recently"
@@ -189,7 +189,7 @@ fun ApplicantCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Profile Image with Status Indicator
+                // Profile Image with Status Indicator Tick Mark
                 Box(contentAlignment = Alignment.BottomEnd) {
                     Box(
                         modifier = Modifier
@@ -205,10 +205,10 @@ fun ApplicantCard(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
-                    
+
                     Box(
                         modifier = Modifier
-                            .size(14.dp)
+                            .size(18.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surface)
                             .padding(2.dp)
@@ -219,12 +219,29 @@ fun ApplicantCard(
                                     "REJECTED" -> Color(0xFFF44336)
                                     else -> Color(0xFFFFC107)
                                 }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (status == "ACCEPTED") {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Accepted",
+                                tint = Color.White,
+                                modifier = Modifier.size(10.dp)
                             )
-                    )
+                        } else if (status == "REJECTED") {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Rejected",
+                                tint = Color.White,
+                                modifier = Modifier.size(10.dp)
+                            )
+                        }
+                    }
                 }
-                
+
                 Spacer(modifier = Modifier.width(16.dp))
-                
+
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = applicant.username,
@@ -240,9 +257,9 @@ fun ApplicantCard(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -261,7 +278,7 @@ fun ApplicantCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 Surface(
                     color = when (status) {
                         "ACCEPTED" -> Color(0xFFE8F5E9)
@@ -270,20 +287,41 @@ fun ApplicantCard(
                     },
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text(
-                        text = status.lowercase().replaceFirstChar { it.uppercase() },
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = when (status) {
-                            "ACCEPTED" -> Color(0xFF2E7D32)
-                            "REJECTED" -> Color(0xFFC62828)
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (status == "ACCEPTED") {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = Color(0xFF2E7D32),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                        } else if (status == "REJECTED") {
+                            Icon(
+                                imageVector = Icons.Default.Cancel,
+                                contentDescription = null,
+                                tint = Color(0xFFC62828),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
+                        Text(
+                            text = status.lowercase().replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.labelMedium,
+                            color = when (status) {
+                                "ACCEPTED" -> Color(0xFF2E7D32)
+                                "REJECTED" -> Color(0xFFC62828)
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
-            
+
             if (status == "PENDING") {
                 Spacer(modifier = Modifier.height(24.dp))
                 Row(
@@ -293,18 +331,22 @@ fun ApplicantCard(
                     OutlinedButton(
                         onClick = onReject,
                         enabled = !isProcessing,
-                        modifier = Modifier.weight(1f).height(48.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFC62828)),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFC62828).copy(alpha = 0.5f))
                     ) {
                         Text("Reject", fontWeight = FontWeight.Bold)
                     }
-                    
+
                     Button(
                         onClick = onAccept,
                         enabled = !isProcessing,
-                        modifier = Modifier.weight(1f).height(48.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
@@ -323,19 +365,23 @@ fun ApplicantCard(
                     },
                     shape = RoundedCornerShape(14.dp)
                 ) {
-                    Box(
+                    Row(
                         modifier = Modifier.padding(12.dp),
-                        contentAlignment = Alignment.Center
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Icon(
+                            imageVector = if (status == "ACCEPTED") Icons.Default.CheckCircle else Icons.Default.Cancel,
+                            contentDescription = null,
+                            tint = if (status == "ACCEPTED") Color(0xFF2E7D32) else Color(0xFFC62828),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (status == "ACCEPTED") "Application Accepted" else "Application Rejected",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = when (status) {
-                                "ACCEPTED" -> Color(0xFF2E7D32)
-                                "REJECTED" -> Color(0xFFC62828)
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                            }
+                            color = if (status == "ACCEPTED") Color(0xFF2E7D32) else Color(0xFFC62828)
                         )
                     }
                 }
@@ -347,35 +393,9 @@ fun ApplicantCard(
 @Preview(showBackground = true)
 @Composable
 fun ViewApplicantsPreview() {
-    val dummyApplicants = listOf(
-        ApplicantDto(
-            id = 1,
-            userId = 1,
-            username = "Karthikeya",
-            headline = "Android Developer",
-            status = "PENDING",
-            appliedAt = Instant.now()
-        ),
-        ApplicantDto(
-            id = 2,
-            userId = 2,
-            username = "John Doe",
-            headline = "Web Developer",
-            status = "ACCEPTED",
-            appliedAt = Instant.now()
-        ),
-        ApplicantDto(
-            id = 3,
-            userId = 3,
-            username = "Jane Smith",
-            headline = "UI/UX Designer",
-            status = "REJECTED",
-            appliedAt = Instant.now()
-        )
-    )
     LocalJobFinderTheme {
         ViewApplicantsUi(
-            state = ViewApplicantsUiState(applicants = dummyApplicants, totalElements = 3),
+            state = ViewApplicantsUiState(totalElements = 3),
             onEvent = {}
         )
     }

@@ -3,19 +3,18 @@ package com.linker.app.feature.screens.job.post_jobs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.linker.app.core.util.enums.JobTypeEnum
 import com.linker.app.ui.theme.LocalJobFinderTheme
 import java.time.ZoneId
@@ -28,14 +27,18 @@ fun PostJobUi(
     onEvent: (PostJobEvent) -> Unit
 ) {
     Scaffold(
+        contentWindowInsets = WindowInsets(0.dp),
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Post a Job", fontWeight = FontWeight.Bold) },
+                title = { Text("Post a Job", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = { onEvent(PostJobEvent.OnBackClicked) }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { paddingValues ->
@@ -43,19 +46,20 @@ fun PostJobUi(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .imePadding()
                 .background(MaterialTheme.colorScheme.background),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
                 Text(
-                    text = "Job Details",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    text = "Job Information 🛠️",
+                    style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Fill in the details below to post a new job opportunity.",
+                    text = "Provide clear details to attract the best local workers for your task.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -87,7 +91,7 @@ fun PostJobUi(
                         PostJobTextField(
                             value = state.payAmount,
                             onValueChange = { onEvent(PostJobEvent.OnPayAmountChanged(it)) },
-                            label = "Salary",
+                            label = "Salary (₹)",
                             placeholder = "e.g. 500",
                             icon = Icons.Default.CurrencyRupee
                         )
@@ -97,7 +101,7 @@ fun PostJobUi(
                             value = state.address,
                             onValueChange = { onEvent(PostJobEvent.OnAddressChanged(it)) },
                             label = "Location",
-                            placeholder = "e.g. Vinukonda",
+                            placeholder = "e.g. Guntur",
                             icon = Icons.Default.LocationOn
                         )
                     }
@@ -105,13 +109,27 @@ fun PostJobUi(
             }
 
             item {
-                Text(text = "Job Type", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = "Job Payment Type",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    JobTypeEnum.values().forEach { type ->
+                    JobTypeEnum.entries.forEach { type ->
                         FilterChip(
                             selected = state.jobType == type,
                             onClick = { onEvent(PostJobEvent.OnJobTypeChanged(type)) },
-                            label = { Text(type.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                            label = { 
+                                Text(
+                                    text = type.name.lowercase().replaceFirstChar { it.uppercase() },
+                                    style = MaterialTheme.typography.labelMedium
+                                ) 
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         )
                     }
                 }
@@ -121,8 +139,8 @@ fun PostJobUi(
                 val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy - hh:mm a").withZone(ZoneId.systemDefault())
                 PostJobTextField(
                     value = formatter.format(state.jobTime),
-                    onValueChange = { /* Handle time picker in future */ },
-                    label = "Job Time",
+                    onValueChange = { },
+                    label = "Job Scheduled Time",
                     placeholder = "",
                     icon = Icons.Default.Schedule,
                     readOnly = true
@@ -134,38 +152,51 @@ fun PostJobUi(
                     value = state.description,
                     onValueChange = { onEvent(PostJobEvent.OnDescriptionChanged(it)) },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Job Description") },
-                    placeholder = { Text("Describe the job requirements and responsibilities...") },
-                    shape = RoundedCornerShape(12.dp),
-                    minLines = 4,
+                    label = { Text("Job Description / Bio") },
+                    placeholder = { Text("Describe the work required, tools needed, and timing...") },
+                    shape = MaterialTheme.shapes.large,
+                    minLines = 3,
+                    maxLines = 6,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
                     )
                 )
             }
 
             item {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Button(
                     onClick = { onEvent(PostJobEvent.OnPostClicked) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+                    shape = MaterialTheme.shapes.large,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
                     enabled = !state.isLoading
                 ) {
                     if (state.isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.5.dp
+                        )
                     } else {
-                        Text("Post Job Opportunity", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(
+                            text = "Post Job Listing",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        )
                     }
                 }
             }
 
             item {
-                Spacer(modifier = Modifier.height(100.dp))
+                Spacer(modifier = Modifier.height(64.dp))
             }
         }
     }
@@ -188,11 +219,13 @@ fun PostJobTextField(
         placeholder = { Text(placeholder) },
         readOnly = readOnly,
         leadingIcon = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.large,
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface
         )
     )
 }

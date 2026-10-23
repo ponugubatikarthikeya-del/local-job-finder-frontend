@@ -7,22 +7,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Facebook
-import androidx.compose.material.icons.filled.GMobiledata
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.linker.app.core.util.components.AppTextField
 import com.linker.app.ui.theme.LocalJobFinderTheme
 
@@ -43,62 +38,62 @@ fun SignupUi(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .padding(24.dp)
+                    .imePadding()
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.Center
             ) {
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(48.dp))
 
                 Text(
-                    text = "Create your\nAccount",
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 40.sp
-                    )
+                    text = "Create Account ✨\nJoin Local Job Finder",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
 
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(12.dp))
 
                 Text(
-                    text = "Let's sign in to your account",
-                    fontSize = 16.sp
+                    text = "Fill in your details to start applying or posting local services.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(32.dp))
 
                 AppTextField(
                     value = state.username,
                     onValueChange = { onEvent(SignupEvent.OnUserNameChanged(it)) },
-                    label = "Enter username",
+                    label = "Username",
                     leadingIcon = Icons.Outlined.Person
                 )
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(16.dp))
 
                 AppTextField(
                     value = state.phone,
                     onValueChange = { onEvent(SignupEvent.OnPhoneChanged(it)) },
-                    label = "Enter phone",
+                    label = "Phone Number",
                     leadingIcon = Icons.Outlined.Phone,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
                 )
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(16.dp))
 
                 AppTextField(
                     value = state.email,
                     onValueChange = { onEvent(SignupEvent.OnEmailChanged(it)) },
-                    label = "Enter email",
+                    label = "Email Address",
                     leadingIcon = Icons.Outlined.Email,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 )
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(16.dp))
 
                 AppTextField(
                     value = state.password,
                     onValueChange = { onEvent(SignupEvent.OnPasswordChanged(it)) },
-                    label = "Enter password",
+                    label = "Password",
                     leadingIcon = Icons.Outlined.Lock,
                     visualTransformation = if (state.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
@@ -106,14 +101,14 @@ fun SignupUi(
                             Icon(
                                 imageVector = if (state.isPasswordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                                 contentDescription = "Toggle password visibility",
-                                tint = Color.Gray
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                 )
 
-                Spacer(Modifier.height(30.dp))
+                Spacer(Modifier.height(32.dp))
 
                 Button(
                     onClick = { onEvent(SignupEvent.OnSignupBtnClicked) },
@@ -122,78 +117,26 @@ fun SignupUi(
                         .height(56.dp),
                     shape = MaterialTheme.shapes.large,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Blue,
-                        contentColor = Color.White
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     enabled = !state.isLoading
                 ) {
                     if (state.isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.5.dp
                         )
                     } else {
                         Text(
-                            text = "Signup",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                            text = "Sign Up",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
-
-                Text(
-                    text = "or continue with",
-                    fontSize = 16.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { onEvent(SignupEvent.OnGoogleAuthClicked) },
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        shape = MaterialTheme.shapes.medium,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.GMobiledata,
-                                contentDescription = "Google",
-                                modifier = Modifier.size(24.dp),
-                                tint = Color.Unspecified
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(text = "Google")
-                        }
-                    }
-
-                    OutlinedButton(
-                        onClick = { onEvent(SignupEvent.OnFacebookAuthClicked) },
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(4.dp)) {
-                            Icon(
-                                imageVector = Icons.Default.Facebook,
-                                contentDescription = "Facebook",
-                                modifier = Modifier.size(24.dp),
-                                tint = Color(0xFF1877F2)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(text = "Facebook")
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(32.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -202,18 +145,18 @@ fun SignupUi(
                 ) {
                     Text(
                         text = "Already have an account? ",
-                        fontSize = 16.sp
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = "Login",
-                        fontSize = 16.sp,
-                        color = Color.Blue,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.clickable { onEvent(SignupEvent.OnNavigateLoginClicked) }
                     )
                 }
 
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(48.dp))
             }
         }
     }

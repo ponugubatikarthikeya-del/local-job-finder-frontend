@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSerializer
+import com.linker.app.core.network_api.Interceptor.AuthAuthenticator
 import com.linker.app.core.network_api.Interceptor.AuthInterceptor
 import com.linker.app.core.network_api.api.TokenRefreshService
 import dagger.Module
@@ -24,7 +25,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "http://172.22.145.99:8080/"
+    private const val BASE_URL = "http://10.166.85.99:8080/"
 
     @Provides
     @Singleton
@@ -56,10 +57,12 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(
         authInterceptor: AuthInterceptor,
+        authAuthenticator: AuthAuthenticator,
         @Named("BasicClient") basicClient: OkHttpClient
     ): OkHttpClient {
         return basicClient.newBuilder()
             .addInterceptor(authInterceptor)
+            .authenticator(authAuthenticator)
             .build()
     }
 

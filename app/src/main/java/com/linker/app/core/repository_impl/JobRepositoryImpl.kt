@@ -1,59 +1,46 @@
 package com.linker.app.core.repository_impl
 
-import com.linker.app.core.database.dao.JobDao
-import com.linker.app.core.database.dao.MyJobDao
 import com.linker.app.core.database.entity.JobEntity
 import com.linker.app.core.database.entity.MyJobEntity
 import com.linker.app.core.network_api.AppException
 import com.linker.app.core.network_api.api.ApplicationsApiService
 import com.linker.app.core.network_api.api.JobApiService
 import com.linker.app.core.network_api.NetworkResult
-import com.linker.app.core.data.models.HomeJobCard
+import com.linker.app.core.data.models.HomeJobDto
 import com.linker.app.core.data.request.PostJobRequest
 import com.linker.app.core.data.models.JobDto
-import com.linker.app.core.data.responses.UserResponse
-import com.linker.app.core.network_api.repository.JobRepository
+import com.linker.app.core.data.responses.JobDataResponse
+import com.linker.app.core.data.responses.JobResponse
+import com.linker.app.core.repository.JobRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
+import java.io.IOException
 import javax.inject.Inject
+
+import com.linker.app.core.database.app_database.JobDatabase
+import com.linker.app.core.database.paging.JobPageMediator
+import com.linker.app.core.database.paging.MyJobsPageMediator
+import androidx.paging.ExperimentalPagingApi
 
 class JobRepositoryImpl @Inject constructor(
     private val apiService: JobApiService,
     private val applicationsApiService: ApplicationsApiService,
-    private val jobDao: JobDao,
-    private val myJobDao: MyJobDao,
+    private val database: JobDatabase,
     private val ioDispatcher: CoroutineDispatcher
 ) : JobRepository {
 
-    override suspend fun getActiveJobsNearby(
-        lat: Double,
-        lng: Double,
-        radius: Double,
-        page: Int,
-        size: Int
-    ): NetworkResult<Unit> = withContext(ioDispatcher) {
-        try {
-            val response = apiService.getActiveJobs(
-                latitude = lat,
-                longitude = lng,
-                radius = radius,
-                page = page,
-                size = size
-            )
-            val entities = response.allJobs.map { it.toJobEntity() }
-            jobDao.deleteAllJobs() // Clear old jobs for nearby results
-            jobDao.upsertJobs(entities)
-            NetworkResult.Success(Unit)
-        } catch (e: Exception) {
-            android.util.Log.e("JOB_REPO", "Error fetching nearby jobs: ${e.message}", e)
-            NetworkResult.Failure(AppException.NetworkException(e.message ?: "Failed to fetch nearby jobs", e))
-        }
-    }
+    private val jobDao = database.jobDao()
+    private val myJobDao = database.myJobDao()
 
-    override suspend fun postJob(request: PostJobRequest): NetworkResult<UserResponse> = withContext(ioDispatcher) {
+    override suspend fun postJob(request: PostJobRequest): NetworkResult<JobDataResponse<JobDto>> = withContext(ioDispatcher) {
         try {
             val response = apiService.postJob(request)
             NetworkResult.Success(response)
@@ -70,18 +57,21 @@ class JobRepositoryImpl @Inject constructor(
         try {
             applicationsApiService.applyJob(jobId)
             NetworkResult.Success(Unit)
-        } catch (e: retrofit2.HttpException) {
+        } catch (e: HttpException) {
             NetworkResult.Failure(AppException.ServerException(e.code(), e.message()))
-        } catch (e: java.io.IOException) {
+        } catch (e: IOException) {
             NetworkResult.Failure(AppException.NetworkException("No internet connection", e))
         } catch (e: Exception) {
             NetworkResult.Failure(AppException.UnknownException(e.localizedMessage ?: "Unknown error"))
         }
     }
 
-    override suspend fun viewApplicants(jobId: Long, page: Int, size: Int): NetworkResult<com.linker.app.core.data.responses.ViewApplicantsResponse> = withContext(ioDispatcher) {
+    override suspend fun deleteJob(jobId: Long): NetworkResult<JobResponse> = withContext(ioDispatcher) {
         try {
-            val response = applicationsApiService.viewApplicants(jobId, page, size)
+            val response = apiService.deleteJob(jobId)
+            // Also delete from local database
+            jobDao.deleteJobById(jobId)
+            myJobDao.deleteMyJobById(jobId)
             NetworkResult.Success(response)
         } catch (e: retrofit2.HttpException) {
             NetworkResult.Failure(AppException.ServerException(e.code(), e.message()))
@@ -92,94 +82,48 @@ class JobRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun deleteJob(jobId: Long): NetworkResult<Unit> = withContext(ioDispatcher) {
+    override suspend fun completeJob(jobId: Long): NetworkResult<JobResponse> = withContext(ioDispatcher) {
         try {
-            apiService.deleteJob(jobId)
-            // Also delete from local database
-            jobDao.deleteJobById(jobId)
-            myJobDao.deleteMyJobById(jobId)
-            NetworkResult.Success(Unit)
-        } catch (e: retrofit2.HttpException) {
+            val response = apiService.completeJob(jobId)
+            NetworkResult.Success(response)
+        } catch (e: HttpException) {
             NetworkResult.Failure(AppException.ServerException(e.code(), e.message()))
-        } catch (e: java.io.IOException) {
+        } catch (e: IOException) {
             NetworkResult.Failure(AppException.NetworkException("No internet connection", e))
         } catch (e: Exception) {
             NetworkResult.Failure(AppException.UnknownException(e.localizedMessage ?: "Unknown error"))
         }
     }
 
-    override suspend fun getMyJobs(page: Int, size: Int): NetworkResult<Unit> = withContext(ioDispatcher) {
-        try {
-            val response = apiService.getMyJobs(page, size)
-            val entities = response.allJobs.map { it.toMyJobEntity() }
-            if (page == 0) {
-                myJobDao.deleteAllMyJobs()
-            }
-            myJobDao.upsertMyJobs(entities)
-            NetworkResult.Success(Unit)
-        } catch (e: retrofit2.HttpException) {
-            NetworkResult.Failure(AppException.ServerException(e.code(), e.message()))
-        } catch (e: java.io.IOException) {
-            NetworkResult.Failure(AppException.NetworkException("No internet connection", e))
-        } catch (e: Exception) {
-            NetworkResult.Failure(AppException.UnknownException(e.localizedMessage ?: "Unknown error"))
-        }
-    }
-
-    override suspend fun searchJobs(
-        lat: Double,
-        lng: Double,
-        search: String?,
-        category: String?,
-        radius: Double,
-        page: Int,
-        size: Int
-    ): NetworkResult<Unit> = withContext(ioDispatcher) {
-        try {
-            val response = apiService.searchJobs(
-                latitude = lat,
-                longitude = lng,
-                radius = radius,
+    @OptIn(ExperimentalPagingApi::class)
+    override fun getJobsFlow(search: String?, category: String?, lat: Double, lng: Double): Flow<PagingData<HomeJobDto>> {
+        return Pager(
+            config = PagingConfig(pageSize = 20),
+            remoteMediator = JobPageMediator(
                 search = search,
                 category = category,
-                page = page,
-                size = size
-            )
-            val entities = response.allJobs.map { it.toJobEntity() }
-            if (page == 0) {
-                jobDao.deleteAllJobs() // Clear results for new search
-            }
-            jobDao.upsertJobs(entities)
-            NetworkResult.Success(Unit)
-        } catch (e: Exception) {
-            android.util.Log.e("JOB_REPO", "Error searching jobs: ${e.message}", e)
-            NetworkResult.Failure(AppException.NetworkException(e.message ?: "Search failed", e))
-        }
-    }
-
-    override suspend fun getJobs(): NetworkResult<List<HomeJobCard>> = withContext(ioDispatcher) {
-        try {
-            // This might be deprecated now in favor of nearby jobs, but keeping for compatibility
-            NetworkResult.Failure(AppException.UnknownException("Use getActiveJobsNearby"))
-        } catch (e: Exception) {
-            NetworkResult.Failure(AppException.NetworkException(e.message ?: "Unknown error", e))
-        }
-    }
-
-    override suspend fun syncJobs(): NetworkResult<Unit> = withContext(ioDispatcher) {
-        // Dummy implementation since we need lat/lng now
-        NetworkResult.Success(Unit)
-    }
-
-    override fun getJobsFlow(): Flow<List<HomeJobCard>> {
-        return jobDao.getJobsFlow().map { entities ->
-            entities.map { it.toHomeJobCard() }
+                lat = lat,
+                lng = lng,
+                apiService = apiService,
+                database = database
+            ),
+            pagingSourceFactory = { jobDao.getJobsFlow() }
+        ).flow.map { pagingData ->
+            pagingData.map { it.toHomeJobDto() }
         }.flowOn(ioDispatcher)
     }
 
-    override fun getMyJobsFlow(): Flow<List<HomeJobCard>> {
-        return myJobDao.getMyJobsFlow().map { entities ->
-            entities.map { it.toHomeJobCard() }
+    @OptIn(ExperimentalPagingApi::class)
+    override fun getMyJobsFlow(): Flow<PagingData<HomeJobDto>> {
+        return Pager(
+            config = PagingConfig(pageSize = 20),
+            remoteMediator = MyJobsPageMediator(
+                apiService = apiService,
+                database = database
+            ),
+            pagingSourceFactory = { myJobDao.getMyJobsFlow() }
+        ).flow.map { pagingData ->
+            pagingData.map { it.toHomeJobDto() }
         }.flowOn(ioDispatcher)
     }
 
@@ -192,7 +136,7 @@ class JobRepositoryImpl @Inject constructor(
         myJobDao.deleteAllMyJobs()
     }
 
-    private fun JobEntity.toHomeJobCard() = HomeJobCard(
+    private fun JobEntity.toHomeJobDto() = HomeJobDto(
         id = id,
         userId = userId,
         username = username,
@@ -205,7 +149,7 @@ class JobRepositoryImpl @Inject constructor(
         distance = distance
     )
 
-    private fun MyJobEntity.toHomeJobCard() = HomeJobCard(
+    private fun MyJobEntity.toHomeJobDto() = HomeJobDto(
         id = id,
         userId = userId,
         username = username,
@@ -243,9 +187,9 @@ class JobRepositoryImpl @Inject constructor(
         category = category,
         payAmount = payAmount,
         jobType = jobType,
-        address = address,
+        address = address ?: "No address provided",
         status = status,
-        distance = distance,
+        distance = distance ?: 0.0,
         jobTime = jobTime,
         createdAt = createdAt
     )
@@ -255,11 +199,11 @@ class JobRepositoryImpl @Inject constructor(
         userId = userId,
         username = username ?: "Unknown",
         title = title,
-        description = description,
-        category = category,
+        description = description ,
+        category = category ,
         payAmount = payAmount,
-        jobType = jobType,
-        address = address,
+        jobType = jobType ,
+        address = address ?:"No address provided" ,
         status = status,
         distance = distance,
         jobTime = jobTime,

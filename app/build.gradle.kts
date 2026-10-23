@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.dagger.hilt.android)
-    alias(libs.plugins.googleServices)
 }
 
 android {
@@ -82,18 +81,21 @@ dependencies {
     implementation(libs.androidx.compose.material3.windowSizeClass)
     implementation(libs.kotlinx.serialization.json) // For safe routing
 
-    // implementation(libs.androidx.google.fonts)
+    implementation(libs.androidx.google.fonts)
 
     // 5. Room Database
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
-    // Firebase
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.messaging.ktx)
     implementation(libs.grpc.android)
 
     // For handling easy await extensions on Firebase Tasks
     implementation(libs.kotlinx.coroutines.play.services)
+
+    // Paging 3
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.paging.compose)
+    implementation(libs.androidx.room.paging)
+
 }
