@@ -160,4 +160,4 @@ The Backend client is maintained in a separate repository.
 
 ## 📄 License & Credits
 
-Built with ❤️ using modern native Android technologies.
+Built with modern native Android technologies.
