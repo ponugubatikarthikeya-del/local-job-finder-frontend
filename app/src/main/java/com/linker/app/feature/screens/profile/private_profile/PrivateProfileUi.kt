@@ -1,7 +1,6 @@
 package com.linker.app.feature.screens.profile.private_profile
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -105,16 +104,16 @@ fun PrivateProfileUi(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        Button(
-                            onClick = { onEvent(PrivateProfileEvent.OnViewPublicProfileClicked) },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        ) {
-                            Text("View Public Profile", fontWeight = FontWeight.Bold)
-                        }
+//                        Button(
+//                            onClick = { onEvent(PrivateProfileEvent.OnViewPublicProfileClicked) },
+//                            shape = RoundedCornerShape(12.dp),
+//                            colors = ButtonDefaults.buttonColors(
+//                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+//                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+//                            )
+//                        ) {
+//                            Text("View Public Profile", fontWeight = FontWeight.Bold)
+//                        }
 
                         Spacer(modifier = Modifier.height(24.dp))
 
@@ -141,7 +140,8 @@ fun PrivateProfileUi(
                         DetailCard(
                             Icons.Default.Build,
                             "Skills",
-                            user.skills.joinToString(", ").ifEmpty { "None" })
+                            user.skills?.joinToString(", ")?.ifEmpty { "None" } ?: "None"
+                        )
                         DetailCard(
                             Icons.Default.Description,
                             "Bio",
@@ -239,7 +239,7 @@ fun DetailCard(icon: ImageVector, label: String, value: String) {
                 )
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
             }

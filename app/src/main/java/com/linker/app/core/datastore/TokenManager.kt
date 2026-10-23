@@ -9,32 +9,86 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import org.json.JSONObject
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
-import java.util.UUID
 
 // Extension to create a single DataStore instance across the app
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "auth_prefs")
 
+/**
+ * Thread-safe token manager that provides both reactive DataStore flows and non-blocking,
+ * synchronous in-memory cached accessors (@Volatile) to prevent runBlocking deadlocks inside OkHttp Interceptors/Authenticators.
+ */
 @Singleton
 class TokenManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     companion object {
         private val ACCESS_TOKEN_KEY = stringPreferencesKey("access_token")
         private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
-
         private val RESET_KEY = stringPreferencesKey("reset_key")
         private val DEVICE_ID_KEY = stringPreferencesKey("device_id")
         private val LATITUDE_KEY = stringPreferencesKey("latitude")
         private val LONGITUDE_KEY = stringPreferencesKey("longitude")
         private val ADDRESS_KEY = stringPreferencesKey("address")
         private val HAS_ENTERED_ADDRESS_KEY = booleanPreferencesKey("has_entered_address")
+    }
+
+    // Volatile in-memory cached fields for non-blocking synchronous reads in OkHttp layer
+    @Volatile
+    private var cachedAccessToken: String? = null
+
+    @Volatile
+    private var cachedRefreshToken: String? = null
+
+    @Volatile
+    private var cachedDeviceId: String? = null
+
+    init {
+        // Continuously keep in-memory cache synchronized with DataStore updates
+        context.dataStore.data
+            .onEach { preferences ->
+                cachedAccessToken = preferences[ACCESS_TOKEN_KEY]
+                cachedRefreshToken = preferences[REFRESH_TOKEN_KEY]
+                cachedDeviceId = preferences[DEVICE_ID_KEY]
+            }
+            .launchIn(scope)
+    }
+
+    /**
+     * Non-blocking, synchronous getter for access token (O(1) memory lookup).
+     */
+    fun getAccessTokenSync(): String? = cachedAccessToken
+
+    /**
+     * Non-blocking, synchronous getter for refresh token (O(1) memory lookup).
+     */
+    fun getRefreshTokenSync(): String? = cachedRefreshToken
+
+    /**
+     * Non-blocking, synchronous getter for persistent device ID.
+     */
+    fun getDeviceIdSync(): String {
+        val existing = cachedDeviceId
+        if (!existing.isNullOrBlank()) {
+            return existing
+        }
+        val generated = UUID.randomUUID().toString()
+        cachedDeviceId = generated
+        return generated
     }
 
     val latitude: Flow<String?> = context.dataStore.data.map { preferences ->
@@ -63,7 +117,7 @@ class TokenManager @Inject constructor(
     }
 
     /**
-     * Clears user location settings (Useful when resetting address or on full data wipe)
+     * Clears user location settings.
      */
     suspend fun clearLocation() {
         context.dataStore.edit { preferences ->
@@ -84,7 +138,7 @@ class TokenManager @Inject constructor(
         preferences[REFRESH_TOKEN_KEY]
     }
 
-    val resetKey : Flow<String?> = context.dataStore.data.map { preferences ->
+    val resetKey: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[RESET_KEY]
     }
 
@@ -93,60 +147,70 @@ class TokenManager @Inject constructor(
     }
 
     /**
-     * Synchronously gets or generates a unique persistent Device ID.
      * Gets or generates a persistent installation-unique Device UUID.
-     * Fully compliant with Google Play target SDK privacy guidelines.
      */
     suspend fun getOrCreateDeviceId(): String {
-
-        val existingDeviceId = deviceIdFlow.firstOrNull()
-
-        if (!existingDeviceId.isNullOrBlank()) {
-            return existingDeviceId
+        val existing = cachedDeviceId ?: deviceIdFlow.firstOrNull()
+        if (!existing.isNullOrBlank()) {
+            cachedDeviceId = existing
+            return existing
         }
 
-        // Generate a cryptographically strong UUID
         val newDeviceId = UUID.randomUUID().toString()
-
+        cachedDeviceId = newDeviceId
         context.dataStore.edit { preferences ->
             preferences[DEVICE_ID_KEY] = newDeviceId
         }
-
         return newDeviceId
     }
 
     /**
-     * Decodes JWT payload locally to check "exp" claim.
-     * No network calls involved.
+     * Decodes JWT payload locally to check "exp" claim without network calls.
      */
     fun isTokenExpiredLocally(token: String?): Boolean {
         if (token.isNullOrBlank()) return true
         return try {
             val parts = token.split(".")
             if (parts.size < 2) return true
-            
+
             val payload = String(Base64.decode(parts[1], Base64.DEFAULT))
             val json = JSONObject(payload)
             val exp = json.optLong("exp", 0)
             val currentTimeSeconds = System.currentTimeMillis() / 1000
-            
-            // Adding 10s buffer for clock skew
+
+            // 10-second buffer for clock skew
             currentTimeSeconds >= (exp - 10)
         } catch (e: Exception) {
-            true // If decoding fails, treat as expired
+            true
         }
     }
 
-    // Save tokens securely
+    /**
+     * Synchronously updates in-memory tokens and persists to DataStore.
+     */
     suspend fun saveTokens(accessToken: String, refreshToken: String) {
+        cachedAccessToken = accessToken
+        cachedRefreshToken = refreshToken
         context.dataStore.edit { preferences ->
             preferences[ACCESS_TOKEN_KEY] = accessToken
             preferences[REFRESH_TOKEN_KEY] = refreshToken
         }
     }
 
-    // Clear tokens on logout
+    /**
+     * Non-blocking in-memory token save for OkHttp Authenticator thread.
+     */
+    fun saveTokensSync(accessToken: String, refreshToken: String) {
+        cachedAccessToken = accessToken
+        cachedRefreshToken = refreshToken
+    }
+
+    /**
+     * Clears tokens in memory immediately and in DataStore.
+     */
     suspend fun clearTokens() {
+        cachedAccessToken = null
+        cachedRefreshToken = null
         context.dataStore.edit { preferences ->
             preferences.remove(ACCESS_TOKEN_KEY)
             preferences.remove(REFRESH_TOKEN_KEY)
@@ -155,9 +219,19 @@ class TokenManager @Inject constructor(
     }
 
     /**
+     * Non-blocking in-memory token wipe for OkHttp Authenticator thread.
+     */
+    fun clearTokensSync() {
+        cachedAccessToken = null
+        cachedRefreshToken = null
+    }
+
+    /**
      * Fully resets the user session by clearing tokens and location data.
      */
     suspend fun clearAll() {
+        cachedAccessToken = null
+        cachedRefreshToken = null
         context.dataStore.edit { preferences ->
             preferences.remove(ACCESS_TOKEN_KEY)
             preferences.remove(REFRESH_TOKEN_KEY)
@@ -175,10 +249,9 @@ class TokenManager @Inject constructor(
         }
     }
 
-    suspend fun clearResetKey(){
+    suspend fun clearResetKey() {
         context.dataStore.edit { preferences ->
             preferences.remove(RESET_KEY)
         }
     }
-
 }

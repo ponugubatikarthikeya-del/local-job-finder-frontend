@@ -2,9 +2,13 @@ package com.linker.app.feature.screens.job.view_applicants
 
 import com.linker.app.core.data.models.ApplicantDto
 
+import androidx.paging.PagingData
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+
 data class ViewApplicantsUiState(
     val jobId: Long = 0,
-    val applicants: List<ApplicantDto> = emptyList(),
+    val applicantsPagingDataFlow: Flow<PagingData<ApplicantDto>> = emptyFlow(),
     val totalElements: Long = 0,
     val totalPages: Int = 0,
     val pageNumber: Int = 0,

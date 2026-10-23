@@ -2,10 +2,10 @@ package com.linker.app.feature.screens.profile.public_profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.linker.app.core.data.models.User
+import com.linker.app.core.data.models.UserDto
 import com.linker.app.core.data.models.PublicProfileDto
 import com.linker.app.core.network_api.NetworkResult
-import com.linker.app.core.network_api.repository.ProfileRepository
+import com.linker.app.core.repository.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,8 +59,8 @@ class PublicProfileViewModel @Inject constructor(
         }
     }
 
-    // Helper to convert PublicProfileDto to User (Model)
-    private fun PublicProfileDto.toUser() = User(
+    // Helper to convert PublicProfileDto to UserDto (Model)
+    private fun PublicProfileDto.toUser() = UserDto(
         id = id,
         username = username,
         headline = headline,

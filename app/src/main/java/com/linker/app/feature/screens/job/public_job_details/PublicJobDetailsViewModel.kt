@@ -2,12 +2,15 @@ package com.linker.app.feature.screens.job.public_job_details
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.linker.app.core.network_api.repository.JobRepository
+import com.linker.app.core.network_api.NetworkResult
+import com.linker.app.core.repository.JobRepository
+import com.linker.app.core.repository.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -15,11 +18,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class PublicJobDetailsViewModel @Inject constructor(
-    private val jobRepository: JobRepository
+    private val jobRepository: JobRepository,
+    private val profileRepository: ProfileRepository
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(PublicJobDetailsUistate())
-    val state: StateFlow<PublicJobDetailsUistate> = _state.asStateFlow()
+    private val _state = MutableStateFlow(PublicJobDetailsUiState())
+    val state: StateFlow<PublicJobDetailsUiState> = _state.asStateFlow()
 
     private val _effect = Channel<PublicJobDetailsEffect>(Channel.BUFFERED)
     val effect = _effect.receiveAsFlow()
@@ -34,7 +38,21 @@ class PublicJobDetailsViewModel @Inject constructor(
                 ) 
             }
             val job = jobRepository.getJobById(jobId)
-            _state.update { it.copy(job = job, isLoading = false) }
+            val currentUserId = profileRepository.getUserProfileFlow().firstOrNull()?.id
+            
+            // If the current user is the owner/poster of this job, disable Apply button & enable Delete/Manage
+            val isOwner = currentUserId != null && job?.userId == currentUserId
+            val finalShowApplyButton = showApplyButton && !isOwner
+            val finalShowDeleteButton = showDeleteButton || isOwner
+
+            _state.update { 
+                it.copy(
+                    job = job, 
+                    isLoading = false,
+                    showApplyButton = finalShowApplyButton,
+                    showDeleteButton = finalShowDeleteButton
+                ) 
+            }
         }
     }
 
@@ -61,8 +79,9 @@ class PublicJobDetailsViewModel @Inject constructor(
             is PublicJobDetailsEvent.OnProfileClicked -> {
                 viewModelScope.launch {
                     val job = _state.value.job ?: return@launch
-                    val isPrivate = _state.value.showDeleteButton
-                    _effect.send(PublicJobDetailsEffect.NavigateToProfile(job.id, isPrivate))
+                    val currentUserId = profileRepository.getUserProfileFlow().firstOrNull()?.id
+                    val isOwnProfile = currentUserId != null && job.userId == currentUserId
+                    _effect.send(PublicJobDetailsEffect.NavigateToProfile(job.id, isOwnProfile))
                 }
             }
         }
@@ -75,7 +94,7 @@ class PublicJobDetailsViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isApplying = true) }
             when (val result = jobRepository.applyJob(jobId)) {
-                is com.linker.app.core.network_api.NetworkResult.Success -> {
+                is NetworkResult.Success -> {
                     _state.update { it.copy(isApplying = false, isApplied = true) }
                     _effect.send(PublicJobDetailsEffect.ShowToast("Applied successfully"))
                 }

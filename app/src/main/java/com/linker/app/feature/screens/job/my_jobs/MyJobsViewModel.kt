@@ -2,8 +2,9 @@ package com.linker.app.feature.screens.job.my_jobs
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.cachedIn
 import com.linker.app.core.network_api.NetworkResult
-import com.linker.app.core.network_api.repository.JobRepository
+import com.linker.app.core.repository.JobRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,40 +29,23 @@ class MyJobsViewModel @Inject constructor(
     val effect = _effect.receiveAsFlow()
 
     init {
-        observeMyJobs()
-        fetchMyJobs()
-    }
-
-    private fun observeMyJobs() {
-        jobRepository.getMyJobsFlow()
-            .onEach { jobs ->
-                _state.update { it.copy(jobs = jobs) }
-            }
-            .launchIn(viewModelScope)
-    }
-
-    private fun fetchMyJobs() {
-        viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
-            when (val result = jobRepository.getMyJobs()) {
-                is NetworkResult.Success -> {
-                    _state.update { it.copy(isLoading = false) }
-                }
-                is NetworkResult.Failure -> {
-                    _state.update { it.copy(isLoading = false, error = result.exception.message) }
-                    _effect.send(MyJobsEffect.ShowToast(result.exception.message ?: "Failed to fetch jobs"))
-                }
-                is NetworkResult.Loading -> {}
-            }
+        _state.update { 
+            it.copy(
+                jobsPagingDataFlow = jobRepository.getMyJobsFlow().cachedIn(viewModelScope)
+            ) 
         }
     }
 
     fun onEvent(event: MyJobsEvent) {
         when (event) {
-            is MyJobsEvent.OnRefresh -> fetchMyJobs()
+            is MyJobsEvent.OnRefresh -> {
+                // handled by UI Layer using paging item refresh
+            }
+
             is MyJobsEvent.OnBackClicked -> {
                 viewModelScope.launch { _effect.send(MyJobsEffect.NavigateBack) }
             }
+
             is MyJobsEvent.OnJobClicked -> {
                 viewModelScope.launch { _effect.send(MyJobsEffect.NavigateToJobDetails(event.job)) }
             }

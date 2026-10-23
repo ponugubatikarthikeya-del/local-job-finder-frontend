@@ -1,23 +1,18 @@
 package com.linker.app.core.network_api.di
 
-import com.linker.app.core.database.dao.ApplicantDao
-import com.linker.app.core.database.dao.JobDao
-import com.linker.app.core.database.dao.MyJobDao
+import com.linker.app.core.database.app_database.JobDatabase
 import com.linker.app.core.database.dao.UserDao
 import com.linker.app.core.datastore.TokenManager
 import com.linker.app.core.network_api.api.ApplicationsApiService
 import com.linker.app.core.network_api.api.AuthApiService
-import com.linker.app.core.network_api.api.FcmApiService
 import com.linker.app.core.network_api.api.JobApiService
 import com.linker.app.core.network_api.api.ProfileApiService
-import com.linker.app.core.network_api.repository.ApplicationsRepository
-import com.linker.app.core.network_api.repository.AuthRepository
-import com.linker.app.core.network_api.repository.FcmRepository
-import com.linker.app.core.network_api.repository.JobRepository
-import com.linker.app.core.network_api.repository.ProfileRepository
+import com.linker.app.core.repository.ApplicationsRepository
+import com.linker.app.core.repository.AuthRepository
+import com.linker.app.core.repository.JobRepository
+import com.linker.app.core.repository.ProfileRepository
 import com.linker.app.core.repository_impl.ApplicationsRepositoryImpl
 import com.linker.app.core.repository_impl.AuthRepositoryImpl
-import com.linker.app.core.repository_impl.FcmRepositoryImpl
 import com.linker.app.core.repository_impl.JobRepositoryImpl
 import com.linker.app.core.repository_impl.ProfileRepositoryImpl
 import dagger.Module
@@ -46,11 +41,10 @@ object RepositoryModule {
     fun provideJobRepository(
         apiService: JobApiService,
         applicationsApiService: ApplicationsApiService,
-        jobDao: JobDao,
-        myJobDao: MyJobDao,
+        database: JobDatabase,
         ioDispatcher: CoroutineDispatcher
     ): JobRepository {
-        return JobRepositoryImpl(apiService, applicationsApiService, jobDao, myJobDao, ioDispatcher)
+        return JobRepositoryImpl(apiService, applicationsApiService, database, ioDispatcher)
     }
 
     @Provides
@@ -65,20 +59,11 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun provideFcmRepository(
-        apiService: FcmApiService,
-        ioDispatcher: CoroutineDispatcher
-    ): FcmRepository {
-        return FcmRepositoryImpl(apiService, ioDispatcher)
-    }
-
-    @Provides
-    @Singleton
     fun provideApplicationsRepository(
         apiService: ApplicationsApiService,
-        applicantDao: ApplicantDao,
+        database: JobDatabase,
         ioDispatcher: CoroutineDispatcher
     ): ApplicationsRepository {
-        return ApplicationsRepositoryImpl(apiService, applicantDao, ioDispatcher)
+        return ApplicationsRepositoryImpl(apiService, database, ioDispatcher)
     }
 }

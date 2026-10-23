@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.linker.app.core.data.request.EditProfileRequest
 import com.linker.app.core.network_api.NetworkResult
-import com.linker.app.core.network_api.repository.ProfileRepository
+import com.linker.app.core.repository.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,7 +42,7 @@ class UpdateProfileViewModel @Inject constructor(
                         phone = u.phone ?: "",
                         headline = u.headline ?: "",
                         dateOfBirth = u.dateOfBirth ?: "",
-                        skills = u.skills.joinToString(", "),
+                        skills = u.skills?.joinToString(", ") ?: "",
                         cityName = u.cityName ?: "",
                         userDescription = u.userDescription ?: "",
                         isLoading = false

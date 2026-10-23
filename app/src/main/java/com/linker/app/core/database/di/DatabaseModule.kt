@@ -4,8 +4,11 @@ import android.content.Context
 import androidx.room.Room
 import com.linker.app.core.database.app_database.JobDatabase
 import com.linker.app.core.database.dao.ApplicantDao
+import com.linker.app.core.database.dao.ApplicantRemoteDao
 import com.linker.app.core.database.dao.JobDao
+import com.linker.app.core.database.dao.JobRemoteDao
 import com.linker.app.core.database.dao.MyJobDao
+import com.linker.app.core.database.dao.MyJobsRemoteDao
 import com.linker.app.core.database.dao.UserDao
 import dagger.Module
 import dagger.Provides
@@ -37,6 +40,12 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    fun provideJobRemoteDao(database: JobDatabase): JobRemoteDao {
+        return database.jobRemoteDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideUserDao(database: JobDatabase): UserDao {
         return database.userDao()
     }
@@ -49,7 +58,19 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    fun provideMyJobRemoteDao(database: JobDatabase): MyJobsRemoteDao {
+        return database.myJobRemoteDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideApplicantDao(database: JobDatabase): ApplicantDao {
         return database.applicantDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideApplicantRemoteDao(database: JobDatabase): ApplicantRemoteDao {
+        return database.applicantRemoteDao()
     }
 }

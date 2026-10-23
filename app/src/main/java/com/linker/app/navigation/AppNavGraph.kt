@@ -46,6 +46,7 @@ import com.linker.app.feature.screens.profile.private_profile.PrivateProfileLaun
 import com.linker.app.feature.screens.profile.profile_update.UpdateProfileLauncher
 import com.linker.app.feature.screens.profile.profile_update.UpdateProfileUi
 import com.linker.app.feature.screens.profile.public_profile.PublicProfileLauncher
+import com.linker.app.core.data.models.UserDto
 import com.linker.app.main.MainViewModel
 import com.linker.app.main.splash.SplashState
 import com.linker.app.main.splash.SplashScreen as SplashScreenUi
@@ -67,6 +68,7 @@ fun AppNavGraph(
     val currentDestination = navBackStackEntry?.destination
 
     val splashState by mainViewModel.splashState.collectAsStateWithLifecycle()
+    val userProfile by mainViewModel.userProfile.collectAsStateWithLifecycle()
     var isAnimationFinished by remember { mutableStateOf(false) }
 
     // Collect global internet connectivity state
@@ -118,6 +120,11 @@ fun AppNavGraph(
         }
     }
 
+    val isNavBar = currentDestination?.let { dest ->
+        dest.hasRoute<HomeScreen>() || dest.hasRoute<PrivateProfileScreen>()
+    } ?: false
+
+
     // Visibility logic for Bars - hide on Auth and Splash screens
     val isMainScreen = currentDestination?.let { dest ->
         !dest.hasRoute<LoginScreen>() &&
@@ -139,6 +146,7 @@ fun AppNavGraph(
             gesturesEnabled = currentDestination?.hasRoute<HomeScreen>() == true && isNetworkAvailable, // Only enable drawer gestures on Home screen when online
             drawerContent = {
                 AppDrawerContent(
+                    userProfile = userProfile,
                     navController = navController,
                     currentDestination = currentDestination,
                     drawerState = drawerState,
@@ -155,7 +163,7 @@ fun AppNavGraph(
             Scaffold(
                 contentWindowInsets = WindowInsets(0.dp),
                 bottomBar = {
-                    if (isMainScreen) {
+                    if (isNavBar) {
                         AppBottomBar(
                             navController = navController,
                             currentDestination = currentDestination
@@ -273,13 +281,15 @@ fun AppNavGraph(
                         }
                         HomeLauncher(
                             onOpenDrawer = { scope.launch { drawerState.open() } },
+                            onNavigateToPrivateProfile = { navController.navigate(PrivateProfileScreen) },
                             onNavigateToPublicProfile = { jobId -> 
                                 navController.navigate(PublicProfileScreen(jobId)) 
                             },
                             onNavigateToPublicCardDetails = { job ->
                                 navController.navigate(PublicJobDetailsScreen(job.id, showApplyButton = true))
                             },
-                            onNavigateToNotification = { navController.navigate(NotificationScreen) }
+                            onNavigateToNotification = { navController.navigate(NotificationScreen) },
+                            onNavigateToChangeAddress = { navController.navigate(DetailsTakeScreen) }
                         )
                     }
 
@@ -435,12 +445,16 @@ fun AppNavGraph(
 
 @Composable
 fun AppDrawerContent(
+    userProfile: UserDto?,
     navController: NavHostController,
     currentDestination: NavDestination?,
     drawerState: DrawerState,
     scope: CoroutineScope,
     onLogout: () -> Unit
 ) {
+    val username = userProfile?.username?.ifBlank { "User" } ?: "User"
+    val email = userProfile?.email?.ifBlank { "No email provided" } ?: "No email provided"
+
     ModalDrawerSheet(
         drawerShape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp),
         modifier = Modifier.width(320.dp)
@@ -469,7 +483,7 @@ fun AppDrawerContent(
             Spacer(Modifier.height(10.dp))
 
             Text(
-                text = "Karthikeya",
+                text = username,
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -477,7 +491,7 @@ fun AppDrawerContent(
             Spacer(Modifier.height(6.dp))
 
             Text(
-                text = "karthikeya@gmail.com",
+                text = email,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall
             )

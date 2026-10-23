@@ -2,25 +2,27 @@ package com.linker.app.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.linker.app.core.data.models.UserDto
 import com.linker.app.core.datastore.TokenManager
 import com.linker.app.core.network_api.AppException
+import com.linker.app.core.network_api.AuthEventBus
 import com.linker.app.core.network_api.NetworkResult
 import com.linker.app.core.network_api.connection.NetworkConnectivityObserver
-import com.linker.app.core.network_api.repository.AuthRepository
-import com.linker.app.core.network_api.repository.JobRepository
+import com.linker.app.core.repository.AuthRepository
+import com.linker.app.core.repository.JobRepository
+import com.linker.app.core.repository.ProfileRepository
 import com.linker.app.main.splash.SplashState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -29,27 +31,34 @@ class MainViewModel @Inject constructor(
     private val tokenManager: TokenManager,
     private val authRepository: AuthRepository,
     private val jobRepository: JobRepository,
+    private val profileRepository: ProfileRepository,
+    private val authEventBus: AuthEventBus,
     networkConnectivityObserver: NetworkConnectivityObserver
 ) : ViewModel() {
+
+    val userProfile: StateFlow<UserDto?> = profileRepository.getUserProfileFlow()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
 
     private val _isStabilizing = MutableStateFlow(false)
     val isStabilizing = _isStabilizing.asStateFlow()
 
     private var stabilizationJob: kotlinx.coroutines.Job? = null
 
-    // 2. Expose real-time connectivity as a StateFlow with stabilization logic
+    // Real-time connectivity StateFlow with stabilization
     val isNetworkAvailable: StateFlow<Boolean> = networkConnectivityObserver.isConnected
         .onEach { isConnected ->
-            stabilizationJob?.cancel() // Cancel any pending stabilization to avoid blinks
+            stabilizationJob?.cancel()
             if (isConnected) {
-                // When internet returns, trigger 3-second stabilization
                 stabilizationJob = viewModelScope.launch {
                     _isStabilizing.value = true
                     delay(3000.milliseconds)
                     _isStabilizing.value = false
                 }
             } else {
-                // If internet is lost, stop stabilizing immediately
                 _isStabilizing.value = false
             }
         }
@@ -70,17 +79,22 @@ class MainViewModel @Inject constructor(
 
     init {
         checkAuthStatus()
+        observeAuthLogoutEvents()
+    }
+
+    private fun observeAuthLogoutEvents() {
+        authEventBus.logoutEvent
+            .onEach {
+                _splashState.value = SplashState.Unauthenticated
+            }
+            .launchIn(viewModelScope)
     }
 
     fun checkAuthStatus() {
         viewModelScope.launch {
-            // No longer setting _splashState.value = SplashState.Loading here
-            // to avoid overriding the splash animation with a spinner on startup.
-            
             val accessToken = tokenManager.accessToken.firstOrNull()
             val refreshToken = tokenManager.refreshToken.firstOrNull()
 
-            // Strict Auth Rule: Both tokens MUST be present to even consider Authenticated state
             if (accessToken.isNullOrBlank() || refreshToken.isNullOrBlank()) {
                 _splashState.value = SplashState.Unauthenticated
                 return@launch
@@ -91,7 +105,6 @@ class MainViewModel @Inject constructor(
                 return@launch
             }
 
-            // Access token expired, try to refresh
             performTokenRefresh(refreshToken)
         }
     }
@@ -99,8 +112,6 @@ class MainViewModel @Inject constructor(
     fun retryAuthCheck() {
         viewModelScope.launch {
             _splashState.value = SplashState.Loading
-            
-            // Force 3-second delay as per requirement
             delay(3000.milliseconds)
 
             val refreshToken = tokenManager.refreshToken.firstOrNull()
@@ -112,7 +123,10 @@ class MainViewModel @Inject constructor(
         if (refreshToken != null) {
             when (val result = authRepository.refreshTokens()) {
                 is NetworkResult.Success -> {
-                    tokenManager.saveTokens(result.data.accessToken, result.data.refreshToken)
+                    tokenManager.saveTokens(
+                        accessToken = result.data.data?.get("accessToken") ?: "",
+                        refreshToken = result.data.data?.get("refreshToken") ?: ""
+                    )
                     _splashState.value = SplashState.Authenticated
                 }
                 is NetworkResult.Failure -> {
@@ -151,12 +165,7 @@ class MainViewModel @Inject constructor(
     fun logout(allDevices: Boolean = false) {
         viewModelScope.launch {
             val deviceId = tokenManager.getOrCreateDeviceId()
-            val fcmToken = try {
-                com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()
-            } catch (_: Exception) {
-                ""
-            }
-            authRepository.logout(deviceId, allDevices, fcmToken)
+            authRepository.logout(deviceId, allDevices)
             tokenManager.clearAll()
             jobRepository.clearJobs()
             _splashState.value = SplashState.Unauthenticated

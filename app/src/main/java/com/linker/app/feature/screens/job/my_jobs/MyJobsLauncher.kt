@@ -7,13 +7,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.linker.app.core.data.models.HomeJobCard
+import com.linker.app.core.data.models.HomeJobDto
 
 @Composable
 fun MyJobsLauncher(
     viewModel: MyJobsViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
-    onNavigateToJobDetails: (HomeJobCard) -> Unit
+    onNavigateToJobDetails: (HomeJobDto) -> Unit
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current

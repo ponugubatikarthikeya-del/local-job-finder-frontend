@@ -2,11 +2,10 @@ package com.linker.app.feature.screens.profile.private_profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.linker.app.core.data.models.User
 import com.linker.app.core.datastore.TokenManager
-import com.linker.app.core.network_api.repository.AuthRepository
-import com.linker.app.core.network_api.repository.JobRepository
-import com.linker.app.core.network_api.repository.ProfileRepository
+import com.linker.app.core.repository.AuthRepository
+import com.linker.app.core.repository.JobRepository
+import com.linker.app.core.repository.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +16,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @HiltViewModel
@@ -82,12 +80,7 @@ class PrivateProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
             val deviceId = tokenManager.getOrCreateDeviceId()
-            val fcmToken = try {
-                com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()
-            } catch (_: Exception) {
-                ""
-            }
-            authRepository.logout(deviceId, allDevices, fcmToken)
+            authRepository.logout(deviceId, allDevices)
             tokenManager.clearAll()
             jobRepository.clearJobs()
             profileRepository.clearProfile()

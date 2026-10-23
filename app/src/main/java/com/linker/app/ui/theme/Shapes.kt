@@ -5,7 +5,9 @@ import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
 val Shapes = Shapes(
-    small = RoundedCornerShape(4.dp),    // Checkboxes, small tooltips
-    medium = RoundedCornerShape(12.dp),  // Standard Cards, Alert Dialogs
-    large = RoundedCornerShape(16.dp)    // Bottom sheets, large containers
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),    // Chips, small buttons, tags
+    medium = RoundedCornerShape(18.dp),   // Standard cards, dialogs
+    large = RoundedCornerShape(24.dp),    // Large feature cards, bottom sheets
+    extraLarge = RoundedCornerShape(28.dp) // Main hero containers
 )

@@ -9,17 +9,14 @@ import com.linker.app.core.data.request.SignupOtpValidationRequest
 import com.linker.app.core.data.request.SignupRequest
 import com.linker.app.core.data.responses.AuthResponse
 import com.linker.app.core.data.responses.LoginResponse
-import com.linker.app.core.data.responses.RefreshTokenResponse
 import com.linker.app.core.data.responses.ResetKeyOtpResponse
 import com.linker.app.core.datastore.TokenManager
 import com.linker.app.core.network_api.NetworkResult
 import com.linker.app.core.network_api.api.AuthApiService
-import com.linker.app.core.network_api.repository.AuthRepository
+import com.linker.app.core.repository.AuthRepository
 import com.linker.app.core.network_api.safeApiCall
-import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 class AuthRepositoryImpl @Inject constructor(
@@ -34,19 +31,19 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun verifyOtp(request: SignupOtpValidationRequest): NetworkResult<LoginResponse> {
+    override suspend fun verifyOtp(request: SignupOtpValidationRequest): NetworkResult<LoginResponse<Map<String, String>>> {
         return safeApiCall(ioDispatcher) {
             apiService.verifyOtp(request)
         }
     }
 
-    override suspend fun login(request: LoginRequest): NetworkResult<LoginResponse> {
+    override suspend fun login(request: LoginRequest): NetworkResult<LoginResponse<Map<String, String>>> {
         return safeApiCall(ioDispatcher) {
             apiService.login(request)
         }
     }
 
-    override suspend fun refreshTokens(): NetworkResult<RefreshTokenResponse> {
+    override suspend fun refreshTokens(): NetworkResult<LoginResponse<Map<String, String>>> {
         return safeApiCall(ioDispatcher) {
             val refreshToken = tokenManager.refreshToken.firstOrNull()
                 ?: throw Exception("No refresh token found")
@@ -80,17 +77,11 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun logout(deviceId: String, allDevices: Boolean, fcmToken: String): NetworkResult<AuthResponse> {
         return safeApiCall(ioDispatcher) {
-            val response = apiService.logout(
+            apiService.logout(
                 deviceId = deviceId,
                 allDevices = allDevices,
                 fcmTokenRequest = FcmTokenRequest(fcmToken)
             )
-            try {
-                FirebaseMessaging.getInstance().deleteToken().await()
-            } catch (e: Exception) {
-                android.util.Log.e("AUTH_REPO", "Failed to delete FCM token locally", e)
-            }
-            response
         }
     }
 }

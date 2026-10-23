@@ -4,7 +4,7 @@ import com.linker.app.core.util.enums.JobStatusEnum
 import com.linker.app.core.util.enums.JobTypeEnum
 import java.math.BigDecimal
 
-data class HomeJobCard(
+data class HomeJobDto(
     val id: Long,
     val userId: Long,
     val username: String,
@@ -17,17 +17,3 @@ data class HomeJobCard(
     val distance: Double
 )
 
-//data class CompleteJob(
-//    val id: Long,
-//    val userId: Long,
-//    val username: String,
-//    val title: String,
-//    val description: String,
-//    val category: String,
-//    val payAmount: BigDecimal,
-//    val jobType: JobTypeEnum,
-//    val address: String,
-//    val status: JobStatusEnum,
-//    val jobTime: java.time.LocalDateTime,
-//    val createdAt: java.time.LocalDateTime
-//)

@@ -2,21 +2,23 @@ package com.linker.app.feature.screens.job.view_applicants
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.linker.app.core.data.models.ApplicantDto
+import androidx.paging.cachedIn
 import com.linker.app.core.network_api.NetworkResult
-import com.linker.app.core.network_api.repository.ApplicationsRepository
+import com.linker.app.core.repository.ApplicationsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ViewApplicantsViewModel @Inject constructor(
     private val applicationsRepository: ApplicationsRepository
@@ -28,11 +30,29 @@ class ViewApplicantsViewModel @Inject constructor(
     private val _effect = Channel<ViewApplicantsEffect>()
     val effect = _effect.receiveAsFlow()
 
+    private val _jobIdParams = MutableStateFlow<Long?>(null)
+
+    init {
+        val pagingFlow = _jobIdParams
+            .flatMapLatest { jobId ->
+                if (jobId != null) {
+                    applicationsRepository.getApplicantsFlow(jobId).cachedIn(viewModelScope)
+                } else {
+                    emptyFlow()
+                }
+            }
+
+        _state.update { it.copy(applicantsPagingDataFlow = pagingFlow) }
+    }
+
     fun onEvent(event: ViewApplicantsEvent) {
         when (event) {
+            is ViewApplicantsEvent.OnRefresh -> {
+                // Let the UI handle refresh using LazyPagingItems.refresh()
+            }
             is ViewApplicantsEvent.LoadApplicants -> {
                 _state.update { it.copy(jobId = event.jobId) }
-                observeApplicants(event.jobId)
+                _jobIdParams.value = event.jobId
             }
             is ViewApplicantsEvent.AcceptApplicant -> {
                 val jobId = _state.value.jobId
@@ -64,42 +84,12 @@ class ViewApplicantsViewModel @Inject constructor(
         }
     }
 
-    private fun observeApplicants(jobId: Long) {
-        applicationsRepository.getApplicantsFlow(jobId)
-            .onEach { list ->
-                _state.update { it.copy(applicants = sortApplicants(list)) }
-                
-                // 🟢 Only sync from network if Room is empty and we're not already loading
-                if (list.isEmpty() && !_state.value.isLoading) {
-                    syncApplicants(jobId)
-                }
-            }
-            .launchIn(viewModelScope)
-    }
-
-    private fun syncApplicants(jobId: Long) {
-        viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
-            when (val result = applicationsRepository.syncApplicants(jobId)) {
-                is NetworkResult.Success -> {
-                    _state.update { it.copy(isLoading = false) }
-                }
-                is NetworkResult.Failure -> {
-                    _state.update { it.copy(isLoading = false, error = result.exception.message) }
-                }
-                is NetworkResult.Loading -> {
-                    _state.update { it.copy(isLoading = true) }
-                }
-            }
-        }
-    }
-
     private fun acceptApplicant(jobId: Long, applicantId: Long) {
         if (applicantId == 0L) {
             _state.update { it.copy(error = "Invalid Application ID") }
             return
         }
-        
+
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
             when (val result = applicationsRepository.acceptApplicant(jobId, applicantId)) {
@@ -108,7 +98,6 @@ class ViewApplicantsViewModel @Inject constructor(
                         successMessage = result.data.message ?: "Applicant accepted",
                         isLoading = false
                     ) }
-                    // Status is updated in Room by the repository, UI updates via Flow
                 }
                 is NetworkResult.Failure -> {
                     _state.update { it.copy(
@@ -149,11 +138,5 @@ class ViewApplicantsViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    private fun sortApplicants(list: List<ApplicantDto>): List<ApplicantDto> {
-        return list.sortedWith(compareBy { 
-            if (it.status?.uppercase() == "PENDING") 0 else 1 
-        })
     }
 }
