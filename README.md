@@ -154,7 +154,7 @@ cd local-job-finder-frontend
 
 The Backend client is maintained in a separate repository.
 
-- Backend repo : [local job finder backend](https://github.com/ponugubatikarthikeya-del/local-job-finder-frontend)
+- Backend repo : [local job finder backend](https://github.com/ponugubatikarthikeya-del/Local-Job-Finder)
 
 ---
 
